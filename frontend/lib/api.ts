@@ -5,62 +5,90 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 const api = axios.create({
   baseURL: API_URL,
   headers: {
-    'Content-Type': 'application/json',
+    'Content-Type': 'application/json', // fixed
   },
 });
 
+// -----------------------------
+// Generic wrapper for analytics endpoints
+// -----------------------------
+const fetchAnalytics = async (endpoint: string) => {
+  try {
+    const response = await api.get(endpoint);
+    return response.data;
+  } catch (error: any) {
+    if (error.response && error.response.status === 400) {
+      alert("No data found. Please upload CSV data first.");
+      window.location.href = "/upload"; // redirect to CSV upload page
+    } else {
+      throw error;
+    }
+  }
+};
+
+// -----------------------------
+// CSV Upload
+// -----------------------------
 export const uploadDataset = async (file: File) => {
   const formData = new FormData();
   formData.append('file', file);
-  
+
   const response = await axios.post(`${API_URL}/upload-data`, formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
   });
-  
+
   return response.data;
 };
 
-export const getAnalytics = async () => {
-  const response = await api.get('/analytics');
-  return response.data;
-};
+// -----------------------------
+// Analytics
+// -----------------------------
+export const getAnalytics = () => fetchAnalytics("/analytics");
+export const getPlatformComparison = () => fetchAnalytics("/analytics/platform-comparison");
+export const getContentTypeAnalysis = () => fetchAnalytics("/analytics/post-type");
+export const getTimeAnalysis = () => fetchAnalytics("/analytics/time-analysis");
 
-export const getPlatformComparison = async () => {
-  const response = await api.get('/analytics/platform-comparison');
-  return response.data;
-};
-
-export const getContentTypeAnalysis = async () => {
-  const response = await api.get('/analytics/content-type');
-  return response.data;
-};
-
-export const getTimeAnalysis = async () => {
-  const response = await api.get('/analytics/time-analysis');
-  return response.data;
-};
-
+// -----------------------------
+// Model Training
+// -----------------------------
 export const trainModel = async () => {
-  const response = await api.post('/train-model');
-  return response.data;
+  try {
+    const response = await api.post("/train-model");
+    return response.data;
+  } catch (error: any) {
+    if (error.response && error.response.status === 400) {
+      alert(error.response.data.detail);
+    } else {
+      throw error;
+    }
+  }
 };
 
+// -----------------------------
+// Prediction
+// -----------------------------
 export const predictEngagement = async (data: {
-  post_type: string;
-  posting_time: number;
-  platform: string;
+  Followers_count: number;
+  Post_type: string;
+  Likes: number;
+  Comments: number;
+  Reposts: number;
+  PostingTime: number; // new key to match backend
 }) => {
   const response = await api.post('/predict', data);
   return response.data;
 };
 
-export const getRecommendations = async () => {
-  const response = await api.get('/recommendations');
-  return response.data;
-};
+// -----------------------------
+// Recommendations
+// -----------------------------
+export const getRecommendations = () => fetchAnalytics("/recommendations");
 
+// -----------------------------
+// Data Management
+// -----------------------------
 export const getDataCount = async () => {
   const response = await api.get('/data/count');
   return response.data;
