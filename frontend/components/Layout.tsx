@@ -10,10 +10,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const router = useRouter();
   
   const navItems = [
-    { name: 'Dashboard', path: '/' },
+    { name: 'Home', path: '/' },
     { name: 'Upload', path: '/upload' },
     { name: 'Analytics', path: '/analytics' },
-    { name: 'Predict', path: '/predict' },
+    // { name: 'Predict', path: '/predict' },
     { name: 'Recommendations', path: '/recommendations' },
   ];
   

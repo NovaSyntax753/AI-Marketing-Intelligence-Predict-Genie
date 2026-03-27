@@ -3,12 +3,20 @@ import Layout from '@/components/Layout'
 import { getDataCount, getAnalytics } from '@/lib/api'
 import { FaChartLine, FaUpload, FaBrain, FaLightbulb } from 'react-icons/fa'
 import Link from 'next/link'
+import { motion } from 'framer-motion'
+
+// Types
+interface AnalyticsData {
+  avg_engagement_score: number
+  total_posts: number
+}
 
 export default function Home() {
 
   const [dataCount, setDataCount] = useState(0)
-  const [analytics, setAnalytics] = useState<any>(null)
+  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     loadData()
@@ -16,260 +24,110 @@ export default function Home() {
 
   const loadData = async () => {
     try {
+      setLoading(true)
 
       const countData = await getDataCount()
-      setDataCount(countData.total_records)
+      setDataCount(countData?.total_records || 0)
 
-      if (countData.total_records > 0) {
+      if (countData?.total_records > 0) {
         const analyticsData = await getAnalytics()
         setAnalytics(analyticsData)
       }
 
-    } catch (error) {
-      console.error('Error loading data:', error)
+    } catch (err) {
+      console.error('Error loading data:', err)
+      setError('Failed to load dashboard data')
     } finally {
       setLoading(false)
     }
   }
 
   return (
-
     <Layout>
 
-      <div className="space-y-8">
+      <div className="flex flex-col justify-center items-center text-center min-h-[calc(100vh-220px)] space-y-10">
 
         {/* Header */}
-
-        <div className="text-center">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+        <div>
+          <motion.h1
+            initial={{ scale: 0.6, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.7, type: "spring", stiffness: 100 }}
+            className="text-5xl font-bold mb-4 
+              bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 
+              bg-clip-text text-transparent"
+          >
             Welcome to Predict Genie
-          </h1>
-          <p className="text-xl text-gray-600">
+          </motion.h1>
+
+          <motion.p
+            initial={{ y: 40, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+            className="text-xl text-gray-600"
+          >
             AI-Powered Marketing Intelligence Platform
-          </p>
+          </motion.p>
         </div>
 
+        {/* Loading */}
+        {/* {loading && (
+          <p className="text-gray-500">Loading data...</p>
+        )} */}
 
-        {/* Stats Cards */}
+        {/* Error */}
+        {/* {error && (
+          <p className="text-red-500">{error}</p>
+        )} */}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Stats */}
+        {/* {!loading && !error && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-4xl">
 
-          <div className="stat-card">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-white/80 text-sm">Total Posts</p>
-                <p className="text-3xl font-bold mt-2">{dataCount}</p>
-              </div>
-              <FaChartLine className="text-4xl text-white/50" />
+            <div className="card text-center">
+              <FaUpload className="text-3xl mx-auto mb-2 text-blue-500" />
+              <h3 className="font-semibold">Total Records</h3>
+              <p className="text-2xl font-bold">{dataCount}</p>
             </div>
-          </div>
 
-          {analytics && (
-
-            <>
-
-              <div className="stat-card">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-white/80 text-sm">Avg Engagement</p>
-                    <p className="text-3xl font-bold mt-2">
-                      {analytics.avg_engagement_score}
-                    </p>
-                  </div>
-                  <FaChartLine className="text-4xl text-white/50" />
-                </div>
-              </div>
-
-              <div className="stat-card">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-white/80 text-sm">Content Types</p>
-                    <p className="text-3xl font-bold mt-2">
-                      {Object.keys(analytics?.content_type_stats || {}).length}
-                    </p>
-                  </div>
-                  <FaChartLine className="text-4xl text-white/50" />
-                </div>
-              </div>
-
-              <div className="stat-card">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-white/80 text-sm">Top Posts</p>
-                    <p className="text-3xl font-bold mt-2">
-                      {analytics.top_performing_posts?.length || 0}
-                    </p>
-                  </div>
-                  <FaChartLine className="text-4xl text-white/50" />
-                </div>
-              </div>
-
-            </>
-
-          )}
-
-        </div>
-
-
-        {/* Action Cards */}
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-
-          <Link href="/upload">
-            <div className="card hover:shadow-xl transition-shadow cursor-pointer">
-              <FaUpload className="text-4xl text-primary mb-4" />
-              <h3 className="text-xl font-semibold mb-2">Upload Data</h3>
-              <p className="text-gray-600">
-                Upload your marketing dataset to get started
+            <div className="card text-center">
+              <FaChartLine className="text-3xl mx-auto mb-2 text-green-500" />
+              <h3 className="font-semibold">Total Posts</h3>
+              <p className="text-2xl font-bold">
+                {analytics?.total_posts || 0}
               </p>
             </div>
-          </Link>
 
-          <Link href="/analytics">
-            <div className="card hover:shadow-xl transition-shadow cursor-pointer">
-              <FaChartLine className="text-4xl text-secondary mb-4" />
-              <h3 className="text-xl font-semibold mb-2">Analytics</h3>
-              <p className="text-gray-600">
-                View detailed insights and performance metrics
+            <div className="card text-center">
+              <FaBrain className="text-3xl mx-auto mb-2 text-purple-500" />
+              <h3 className="font-semibold">Avg Engagement</h3>
+              <p className="text-2xl font-bold">
+                {analytics?.avg_engagement_score?.toFixed(2) || 0}
               </p>
-            </div>
-          </Link>
-
-          <Link href="/predict">
-            <div className="card hover:shadow-xl transition-shadow cursor-pointer">
-              <FaBrain className="text-4xl text-green-500 mb-4" />
-              <h3 className="text-xl font-semibold mb-2">Predict</h3>
-              <p className="text-gray-600">
-                Predict engagement for your next post
-              </p>
-            </div>
-          </Link>
-
-          <Link href="/recommendations">
-            <div className="card hover:shadow-xl transition-shadow cursor-pointer">
-              <FaLightbulb className="text-4xl text-yellow-500 mb-4" />
-              <h3 className="text-xl font-semibold mb-2">Recommendations</h3>
-              <p className="text-gray-600">
-                Get AI-powered marketing recommendations
-              </p>
-            </div>
-          </Link>
-
-        </div>
-
-
-        {/* Getting Started */}
-
-        {dataCount === 0 && (
-
-          <div className="card bg-blue-50 border border-blue-200">
-
-            <h3 className="text-xl font-semibold mb-4 text-blue-900">
-              🚀 Getting Started
-            </h3>
-
-            <ol className="list-decimal list-inside space-y-2 text-gray-700">
-              <li>Upload your marketing data CSV file</li>
-              <li>View analytics and insights from your data</li>
-              <li>Train the AI model with your data</li>
-              <li>Get predictions and recommendations</li>
-            </ol>
-
-            <Link href="/upload">
-              <button className="btn-primary mt-4">
-                Upload Your First Dataset
-              </button>
-            </Link>
-
-          </div>
-
-        )}
-
-
-        {/* Top Performing Posts */}
-
-        {analytics && analytics.top_performing_posts?.length > 0 && (
-
-          <div className="card">
-
-            <h3 className="text-2xl font-semibold mb-4">
-              Top Performing Posts
-            </h3>
-
-            <div className="overflow-x-auto">
-
-              <table className="min-w-full divide-y divide-gray-200">
-
-                <thead className="bg-gray-50">
-
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                      Post Type
-                    </th>
-
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                      Engagement
-                    </th>
-
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                      Likes
-                    </th>
-
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                      Comments
-                    </th>
-
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                      Reposts
-                    </th>
-                  </tr>
-
-                </thead>
-
-                <tbody className="bg-white divide-y divide-gray-200">
-
-                  {analytics.top_performing_posts.slice(0,5).map((post:any, idx:number) => (
-
-                    <tr key={idx}>
-
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {post.post_type}
-                      </td>
-
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-primary">
-                        {post.engagement_score}
-                      </td>
-
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {post.likes}
-                      </td>
-
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {post.comments}
-                      </td>
-
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {post.reposts}
-                      </td>
-
-                    </tr>
-
-                  ))}
-
-                </tbody>
-
-              </table>
-
             </div>
 
           </div>
+        )} */}
 
-        )}
+        {/* Actions */}
+        {/* <div className="flex gap-4 mt-6">
 
-      </div>
+          <Link href="/upload" className="btn-primary flex items-center gap-2">
+            <FaUpload /> Upload Data
+          </Link>
+
+          <Link href="/predict" className="btn-secondary flex items-center gap-2">
+            <FaLightbulb /> Predict
+          </Link>
+
+          <Link href="/analytics" className="btn-secondary flex items-center gap-2">
+            <FaChartLine /> View Analytics
+          </Link>
+
+        </div>*/}
+
+      </div> 
 
     </Layout>
-
   )
-
 }
