@@ -196,9 +196,17 @@ from models import MarketingData
 from typing import Dict, List, Any
 from prediction_engine import PredictionEngine
 import random
+import json
+import google.generativeai as genai
+import os
+from dotenv import load_dotenv
+load_dotenv()
+
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+
 
 class RecommendationEngine:
-    """AI-powered recommendation engine for marketing optimization"""
+    """AI-powered recommendation engine with Gemini captions"""
 
     @staticmethod
     def generate_recommendations(db: Session) -> Dict[str, Any]:
@@ -217,7 +225,7 @@ class RecommendationEngine:
             }
 
         # -------------------------
-        # Create DataFrame
+        # DataFrame
         # -------------------------
         df = pd.DataFrame([{
             "post_type": d.post_type,
@@ -232,72 +240,40 @@ class RecommendationEngine:
         } for d in data])
 
         # -------------------------
-        # Best Posting Times (analytics-based OK)
+        # 📊 TIME RECOMMENDATION
         # -------------------------
-        # time_performance = (
-        #     df.groupby("hour")["engagement_score"]
-        #     .mean()
-        #     .sort_values(ascending=False)
-        # )
-
-        # best_times = [
-        #     {
-        #         "hour": int(hour),
-        #         "time_label": RecommendationEngine._format_time(hour),
-        #         "avg_engagement": round(score, 2),
-        #         "recommendation": f"Post at {RecommendationEngine._format_time(hour)}"
-        #     }
-        #     for hour, score in time_performance.head(3).items()
-        # ]
-        # -------------------------
-# SMART TIME RECOMMENDATION
-# -------------------------
-
-            
-
-# Step 1: Count how many posts per hour
         hour_counts = df["hour"].value_counts()
-
-# Step 2: Keep only hours with enough data (>=2 posts)
         valid_hours = hour_counts[hour_counts >= 2].index
-
         filtered_df = df[df["hour"].isin(valid_hours)]
 
-# Step 3: If no valid data, use full dataset
         if filtered_df.empty:
             filtered_df = df
 
-# Step 4: Calculate average engagement per hour
         time_performance = (
             filtered_df.groupby("hour")["engagement_score"]
             .mean()
             .sort_values(ascending=False)
         )
 
-# Step 5: Take top 5 hours
         top_hours = time_performance.head(5).index.tolist()
-
-# Step 6: Pick random 3 from top 5 (gives variation)
         selected_hours = random.sample(top_hours, min(3, len(top_hours)))
 
-# Step 7: Format output
         best_times = [
-        {
-        "hour": int(hour),
-        "time_label": RecommendationEngine._format_time(hour),
-        "avg_engagement": round(time_performance[hour] * 100, 2)
-         }
-        for hour in selected_hours
-    ]
+            {
+                "hour": int(hour),
+                "time_label": RecommendationEngine._format_time(hour),
+                "avg_engagement": round(time_performance[hour] * 100, 2)
+            }
+            for hour in selected_hours
+        ]
+
         # -------------------------
-        # 🔥 ML-BASED BEST CONTENT TYPES
+        # 🤖 CONTENT TYPE (ML)
         # -------------------------
         prediction_engine = PredictionEngine()
 
         if not prediction_engine.is_trained:
-            return {
-                "error": "Model not trained. Please train model first."
-            }
+            return {"error": "Model not trained. Train model first."}
 
         avg_followers = int(df["follower_count"].mean())
         unique_post_types = df["post_type"].unique()
@@ -305,7 +281,6 @@ class RecommendationEngine:
         predictions = []
 
         for post_type in unique_post_types:
-            print("🔥 USING ML MODEL for:", post_type)   # ✅ 
             result = prediction_engine.predict(
                 follower_count=avg_followers,
                 post_type=post_type,
@@ -313,101 +288,62 @@ class RecommendationEngine:
                 mention_count=int(df["mention_count"].mean()),
                 cta_used="no_cta"
             )
-            print("📊 Prediction result:", result)
+
             if result["success"]:
                 predictions.append({
                     "content_type": post_type,
-                    "avg_engagement": round(result["predicted_engagement_score"], 4)*100,
-                    "recommendation": f"{post_type.capitalize()} content is predicted to perform best"
+                    "avg_engagement": round(result["predicted_engagement_score"], 4) * 100,
+                    "recommendation": f"{post_type.capitalize()} performs best"
                 })
 
-        best_content = sorted(
-            predictions,
-            key=lambda x: x["avg_engagement"],
-            reverse=True
-        )[:3]
+        best_content = sorted(predictions, key=lambda x: x["avg_engagement"], reverse=True)[:3]
 
         # -------------------------
-        # Best CTA (still analytics)
+        # 🤖 CTA (ML)
         # -------------------------
-        # cta_performance = (
-        #     df.groupby("CTA_used")["engagement_score"]
-        #     .mean()
-        #     .sort_values(ascending=False)
-        # )
-
-        # best_cta = [
-        #     {
-        #         "cta": cta,
-        #         "avg_engagement": round(score, 2)
-        #     }
-        #     for cta, score in cta_performance.head(3).items()
-        # ]
-       # -------------------------
-# 🔥 ML-BASED CTA RECOMMENDATION
-# -------------------------
-
-# Step 1: Take CTAs from dataset (dynamic)
         cta_options = df["CTA_used"].unique().tolist()
 
-# If very few CTAs, add some defaults
         if len(cta_options) < 3:
             cta_options += ["buy_now", "learn_more", "subscribe", "shop_now"]
 
-        cta_options = list(set(cta_options))  # remove duplicates
+        cta_options = list(set(cta_options))
 
-# Step 2: Prepare base inputs
-        avg_followers = int(df["follower_count"].mean())
         avg_hashtags = int(df["hashtag_count"].mean())
         avg_mentions = int(df["mention_count"].mean())
         best_post_type = df["post_type"].mode()[0]
 
         cta_predictions = []
 
-# Step 3: Try each CTA using ML model
         for cta in cta_options:
+            result = prediction_engine.predict(
+                follower_count=avg_followers,
+                post_type=best_post_type,
+                hashtag_count=avg_hashtags,
+                mention_count=avg_mentions,
+                cta_used=cta
+            )
 
-            print("🤖 Testing CTA:", cta)
+            if result["success"]:
+                cta_predictions.append({
+                    "cta": cta,
+                    "predicted_engagement": result["predicted_engagement_score"] * 100
+                })
 
-        result = prediction_engine.predict(
-        follower_count=avg_followers,
-        post_type=best_post_type,
-        hashtag_count=avg_hashtags,
-        mention_count=avg_mentions,
-        cta_used=cta
-    )
+        best_cta = sorted(cta_predictions, key=lambda x: x["predicted_engagement"], reverse=True)[:2]
 
-        print("📊 Result:", result)
-
-        if result["success"]:
-            cta_predictions.append({
-            "cta": cta,
-            "predicted_engagement": result["predicted_engagement_score"] * 100
-        })
-
-# Step 4: Sort and pick top 3
-        best_cta = sorted(
-            cta_predictions,
-            key=lambda x: x["predicted_engagement"],
-            reverse=True
-        )[:2]
         # -------------------------
-        # Average hashtags
+        # 🔥 GEMINI CAPTIONS
+        # -------------------------
+        caption_suggestions = RecommendationEngine._generate_llm_captions(df)
+
+        # -------------------------
+        # 📊 INSIGHTS
         # -------------------------
         avg_hashtags = df["hashtag_count"].mean()
-
-        # -------------------------
-        # Caption Suggestions
-        # -------------------------
-        caption_suggestions = RecommendationEngine._generate_caption_suggestions()
-
-        # -------------------------
-        # Insights
-        # -------------------------
         insights = RecommendationEngine._generate_insights(df, avg_hashtags)
-        avg_engagement = round(df["engagement_score"].mean(), 4)*100
+
         return {
-            "avg_engagement": avg_engagement,  
+            "avg_engagement": round(df["engagement_score"].mean(), 4) * 100,
             "best_posting_times": best_times,
             "best_content_types": best_content,
             "best_cta": best_cta,
@@ -416,15 +352,71 @@ class RecommendationEngine:
         }
 
     # =========================
-    # Engagement Formula (FIXED: no *100)
+    # 🔥 GEMINI CAPTION GENERATOR
     # =========================
     @staticmethod
-    def calculate_engagement(like_count: int, comment_count: int, repost_count: int, follower_count: int) -> float:
-        return (like_count + 2 * comment_count + 3 * repost_count) / max(follower_count, 1)
+    def _generate_llm_captions(df: pd.DataFrame):
+
+        best_post_type = df["post_type"].mode()[0]
+        best_cta = df.groupby("CTA_used")["engagement_score"].mean().idxmax()
+        avg_engagement = round(df["engagement_score"].mean(), 4)
+        avg_hashtags = int(df["hashtag_count"].mean())
+
+        prompt = f"""
+You are a professional social media marketing expert.
+
+Generate 5 Short Captions Tips.
+
+Context:
+- Best content type: {best_post_type}
+- Best CTA: {best_cta}
+- Avg engagement: {avg_engagement}
+- Avg hashtags: {avg_hashtags}
+
+Rules:
+- Each tip must be VERY SHORT (5-10 words)
+- Focus on actionable advice
+- Examples:
+  - "Ask questions to boost comments"
+  - "Use 5-7 relevant hashtags"
+  - "Add strong CTA like Follow or Share"
+
+Return ONLY JSON:
+[
+  {{ "caption": "..." }},
+  {{ "caption": "..." }},
+  {{ "caption": "..." }},
+  {{ "caption": "..." }},
+  {{ "caption": "..." }}
+]
+"""
+
+        try:
+            model = genai.GenerativeModel("models/gemini-flash-latest")
+            response = model.generate_content(prompt)
+
+            text = response.text.strip()
+
+            # 🔥 Fix JSON formatting issue
+            text = text.replace("```json", "").replace("```", "").strip()
+
+            return json.loads(text)
+
+        except Exception as e:
+            print("Gemini Error:", e)
+
+            # fallback captions
+            return [
+                {"caption": "Boost your engagement with smart content 🚀"},
+                {"caption": "Try this strategy to grow faster 🔥"},
+                {"caption": "Consistency is key to success 💡"}
+            ]
 
     # =========================
-    # Helpers
-    # =========================
+    @staticmethod
+    def calculate_engagement(like_count, comment_count, repost_count, follower_count):
+        return (like_count + 2 * comment_count + 3 * repost_count) / max(follower_count, 1)
+
     @staticmethod
     def _format_time(hour: int) -> str:
         period = "AM" if hour < 12 else "PM"
@@ -434,38 +426,19 @@ class RecommendationEngine:
         return f"{display_hour}:00 {period}"
 
     @staticmethod
-    def _generate_caption_suggestions() -> List[Dict[str, str]]:
-        return [
-            {"tip": "Ask engaging questions", "example": "What do you think about this?", "reason": "Drives more comments"},
-            {"tip": "Use strong CTA", "example": "Tag a friend!", "reason": "Boosts reach and engagement"},
-            {"tip": "Use hashtags smartly", "example": "#Marketing #Growth", "reason": "Improves visibility"},
-            {"tip": "Keep it short", "example": "Short captions = more reads", "reason": "Better readability"}
-        ]
+    def _generate_insights(df: pd.DataFrame, avg_hashtags: float):
 
-    @staticmethod
-    def _generate_insights(df: pd.DataFrame, avg_hashtags: float) -> List[str]:
         insights = []
 
-        avg_engagement = round(df["engagement_score"].mean(), 4) *100
+        avg_engagement = round(df["engagement_score"].mean(), 4) * 100
         insights.append(f"Average engagement score: {avg_engagement}")
 
         best_content = df.groupby("post_type")["engagement_score"].mean().idxmax()
-        insights.append(f"{best_content.capitalize()} posts performed best historically")
+        insights.append(f"{best_content.capitalize()} posts performed best")
 
         best_hour = df.groupby("hour")["engagement_score"].mean().idxmax()
         insights.append(f"Best posting time: {RecommendationEngine._format_time(best_hour)}")
 
         insights.append(f"Average hashtags used: {round(avg_hashtags, 1)}")
-
-        high_posts = len(df[df["engagement_score"] > avg_engagement])
-        percentage = round((high_posts / len(df)) * 100, 1)
-        insights.append(f"{percentage}% posts perform above average")
-
-        if avg_engagement < 0.02:
-            insights.append("Improve content quality & consistency")
-        elif avg_engagement < 0.05:
-            insights.append("Good performance — experiment with formats")
-        else:
-            insights.append("Excellent engagement — scale strategy")
 
         return insights

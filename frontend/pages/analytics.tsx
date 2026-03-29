@@ -185,9 +185,9 @@ export default function Analytics() {
                 <th className="px-6 py-3 text-left text-xs font-medium">Rank</th>
                 <th className="px-6 py-3">Type</th>
                 <th className="px-6 py-3">Engagement</th>
-                <th className="px-6 py-3">Likes</th>
+                {/* <th className="px-6 py-3">Likes</th>
                 <th className="px-6 py-3">Comments</th>
-                <th className="px-6 py-3">Reposts</th>
+                <th className="px-6 py-3">Reposts</th> */}
               </tr>
             </thead>
 
@@ -198,9 +198,9 @@ export default function Analytics() {
                   <td className="px-6 py-4">#{idx + 1}</td>
                   <td className="px-6 py-4">{post.post_type}</td>
                   <td className="px-6 py-4 text-green-600">{post.engagement_score}</td>
-                  <td className="px-6 py-4">{post.likes}</td>
+                  {/* <td className="px-6 py-4">{post.likes}</td>
                   <td className="px-6 py-4">{post.comments}</td>
-                  <td className="px-6 py-4">{post.reposts}</td>
+                  <td className="px-6 py-4">{post.reposts}</td> */}
                 </tr>
               ))}
 

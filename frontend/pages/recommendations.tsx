@@ -211,13 +211,17 @@ import Link from 'next/link';
 // Types
 interface RecommendationData {
   best_cta: {
-  cta: string;
-  predicted_engagement: number;
-}[];
+    cta: string;
+    predicted_engagement: number;
+  }[];
   overall_insights: string[];
   best_posting_times: { time_label: string; avg_engagement: number }[];
   best_content_types: { content_type: string; recommendation: string; avg_engagement: number }[];
-  caption_suggestions: { tip: string; example: string; reason: string }[];
+
+  // 🔥 Gemini captions format
+  caption_suggestions: {
+    caption: string;
+  }[];
 }
 
 export default function Recommendations() {
@@ -286,7 +290,6 @@ export default function Recommendations() {
 
   return (
     <Layout>
-
       <div className="space-y-8">
 
         {/* Header */}
@@ -341,37 +344,20 @@ export default function Recommendations() {
             </div>
           </div>
         )}
-      {/* CTA Recommendations */}
-{ctas.length > 0 && (
-  <div className="card">
-    <div className="flex items-center mb-6">
-      <h2 className="text-2xl font-semibold">Best CTA</h2>
-    </div>
 
-    <div className="space-y-4">
-      {ctas.map((cta, idx) => (
-        <div key={idx} className="bg-green-50 rounded-lg p-5 border">
-          <div className="flex justify-between">
+        {/* CTA */}
+        {ctas.length > 0 && (
+          <div className="card">
+            <h2 className="text-2xl font-semibold mb-6">Best CTA</h2>
 
-            <div>
-              <h3 className="font-semibold capitalize">
-                {cta.cta}
-              </h3>
-              <p className="text-sm text-gray-600">
-                Recommended CTA
-              </p>
-            </div>
-
-            <p className="text-xl font-bold">
-              {/* {(cta.predicted_engagement ?? 0).toFixed(2)}% */}
-            </p>
-
+            {ctas.map((cta, idx) => (
+              <div key={idx} className="bg-green-50 rounded-lg p-5 border mb-3">
+                <h3 className="font-semibold capitalize">{cta.cta}</h3>
+              </div>
+            ))}
           </div>
-        </div>
-      ))}
-    </div>
-  </div>
-)}
+        )}
+
         {/* Content Types */}
         {contentTypes.length > 0 && (
           <div className="card">
@@ -380,45 +366,30 @@ export default function Recommendations() {
               <h2 className="text-2xl font-semibold">Best Content Types</h2>
             </div>
 
-            <div className="space-y-4">
-              {contentTypes.map((content, idx) => (
-                <div key={idx} className="bg-purple-50 rounded-lg p-5 border">
-                  <div className="flex justify-between">
-
-                    <div>
-                      <h3 className="font-semibold capitalize">
-                        {content.content_type}
-                      </h3>
-                      <p className="text-sm text-gray-600">{content.recommendation}</p>
-                    </div>
-
-                    <p className="text-xl font-bold">
-                      {(content?.avg_engagement ?? 0).toFixed(2)}
-                    </p>
-
-                  </div>
-                </div>
-              ))}
-            </div>
+            {contentTypes.map((content, idx) => (
+              <div key={idx} className="bg-purple-50 rounded-lg p-5 border mb-3">
+                <h3 className="font-semibold capitalize">{content.content_type}</h3>
+                <p className="text-sm">{content.recommendation}</p>
+                <p className="text-xs font-bold mt-2">
+                  {content.avg_engagement.toFixed(2)}%
+                </p>
+              </div>
+            ))}
           </div>
         )}
 
-        {/* Captions */}
+        {/* 🔥 GEMINI CAPTIONS */}
         {captions.length > 0 && (
           <div className="card">
             <div className="flex items-center mb-6">
               <FaPencilAlt className="text-3xl text-orange-500 mr-3" />
-              <h2 className="text-2xl font-semibold">Caption Tips</h2>
+              <h2 className="text-2xl font-semibold"> Captions Tips</h2>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-4">
-              {captions.map((s, idx) => (
+            <div className="space-y-4">
+              {captions.map((c, idx) => (
                 <div key={idx} className="bg-orange-50 p-5 rounded-lg border">
-                  <h3 className="font-semibold mb-2">{s.tip}</h3>
-                  <p className="text-sm mb-2">
-                    <strong>Example:</strong> {s.example}
-                  </p>
-                  <p className="text-xs text-gray-500 italic">{s.reason}</p>
+                  <p className="whitespace-pre-line">{c.caption}</p>
                 </div>
               ))}
             </div>
@@ -426,7 +397,6 @@ export default function Recommendations() {
         )}
 
       </div>
-
     </Layout>
   );
 }

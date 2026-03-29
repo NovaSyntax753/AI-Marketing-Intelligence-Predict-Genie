@@ -129,13 +129,13 @@ export default function Upload() {
                       {result.message}
                     </p>
 
-                    <div className="mt-2 text-sm text-green-700">
+                    {/* <div className="mt-2 text-sm text-green-700">
 
                       <p>Records added: {result.records_added}</p>
 
                       <p>Total rows processed: {result.total_rows}</p>
 
-                    </div>
+                    </div> */}
 
                   </div>
 
