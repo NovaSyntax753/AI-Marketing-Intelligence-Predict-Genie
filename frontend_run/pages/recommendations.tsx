@@ -352,79 +352,36 @@ export default function Recommendations() {
         </div>
       </div>
 
-      {/* Caption Tips Grid */}
-      {recs!.caption_suggestions && recs!.caption_suggestions.length > 0 && (
-        <div className="card animate-fade-up" style={{ marginBottom: "20px" }}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              marginBottom: "16px",
-            }}
-          >
-            <div
-              style={{
-                width: "32px",
-                height: "32px",
-                background: "#ede9fe",
-                borderRadius: "8px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <FiEdit3 size={15} color="#6c3bfe" />
-            </div>
-            <h3 style={{ fontSize: "16px", fontWeight: 600, color: "#0f172a" }}>
-              Caption Tips
-            </h3>
-          </div>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-              gap: "12px",
-            }}
-          >
-            {recs!.caption_suggestions.map((tip, i) => (
-              <div
-                key={i}
-                style={{
-                  padding: "12px",
-                  background: "#f8fafc",
-                  borderRadius: "10px",
-                  border: "1px solid #eef1f7",
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: "13px",
-                    fontWeight: 600,
-                    color: "#0f172a",
-                    marginBottom: "6px",
-                  }}
-                >
-                  {tip.tip}
-                </div>
-                <div
-                  style={{
-                    fontSize: "12px",
-                    fontStyle: "italic",
-                    color: "#6c3bfe",
-                    marginBottom: "6px",
-                  }}
-                >
-                  "{tip.example}"
-                </div>
-                <div style={{ fontSize: "11px", color: "#94a3b8" }}>
-                  {tip.reason}
-                </div>
-              </div>
-            ))}
-          </div>
+      {/* Caption Suggestions */}
+      <div className="card">
+        <div className="flex items-center mb-6">
+          <FiEdit3 className="text-3xl text-orange-500 mr-3" />
+          <h2 className="text-2xl font-semibold text-gray-900">
+            Caption Writing Tips
+          </h2>
         </div>
-      )}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {recs!.caption_suggestions.map((suggestion, idx) => (
+            <div
+              key={idx}
+              className="bg-gradient-to-br from-orange-50 to-yellow-50 rounded-lg p-5 border border-orange-200"
+            >
+              <h3 className="font-semibold text-orange-900 mb-2">
+                {suggestion.tip}
+              </h3>
+
+              <p className="text-sm text-gray-600 mb-2">
+                <strong>Example:</strong> {suggestion.example}
+              </p>
+
+              <p className="text-xs text-gray-500 italic">
+                {suggestion.reason}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
 
       {/* CTA Row */}
       <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>

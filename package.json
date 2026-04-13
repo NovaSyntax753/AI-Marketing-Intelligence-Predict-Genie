@@ -1,0 +1,13 @@
+{
+  "name": "predict-genie",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "concurrently -n backend,frontend -c cyan,magenta \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$root=(Get-Location).Path; if (Test-Path (Join-Path $root '.venv312\\Scripts\\python.exe')) { $py=(Join-Path $root '.venv312\\Scripts\\python.exe') } elseif (Test-Path (Join-Path $root '.venv\\Scripts\\python.exe')) { $py=(Join-Path $root '.venv\\Scripts\\python.exe') } else { Write-Error 'No Python virtual environment found. Create .venv or .venv312 first.'; exit 1 }; Push-Location (Join-Path $root 'backend_run'); & $py -m uvicorn main:app --reload --host 127.0.0.1 --port 8000\"",
+    "dev:frontend": "cd frontend_run && npm run dev"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}

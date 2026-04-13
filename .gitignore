@@ -58,3 +58,7 @@ logs/
 .vercel
 *.csv
 !sample_data.csv
+
+# Ignore the applied folder
+New folder/
+New folder_applied/

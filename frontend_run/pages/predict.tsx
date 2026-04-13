@@ -11,7 +11,7 @@ interface TrainResult {
 }
 
 interface PredictionResult {
-  success?: boolean;
+  success: boolean;
   predicted_engagement_score?: number;
 }
 
@@ -345,46 +345,51 @@ export default function Predict() {
           </form>
 
           {/* Prediction Result */}
-          {prediction?.predicted_engagement_score !== undefined && (
-            <div
-              style={{
-                background: "linear-gradient(135deg, #f5f3ff, #ede9fe)",
-                border: "2px solid #c4b5fd",
-                borderRadius: "12px",
-                padding: "24px",
-                textAlign: "center",
-                marginTop: "16px",
-              }}
-            >
+          {prediction?.success &&
+            prediction.predicted_engagement_score !== undefined && (
               <div
                 style={{
-                  fontSize: "11px",
-                  fontWeight: 600,
-                  color: "#7c3aed",
-                  textTransform: "uppercase",
-                  marginBottom: "8px",
-                  letterSpacing: "0.1em",
+                  background: "linear-gradient(135deg, #f5f3ff, #ede9fe)",
+                  border: "2px solid #c4b5fd",
+                  borderRadius: "12px",
+                  padding: "24px",
+                  textAlign: "center",
+                  marginTop: "16px",
                 }}
               >
-                Predicted Score
+                <div
+                  style={{
+                    fontSize: "11px",
+                    fontWeight: 600,
+                    color: "#7c3aed",
+                    textTransform: "uppercase",
+                    marginBottom: "8px",
+                    letterSpacing: "0.1em",
+                  }}
+                >
+                  Predicted Score
+                </div>
+                <div
+                  style={{
+                    fontSize: "48px",
+                    fontWeight: 700,
+                    color: "#6c3bfe",
+                    letterSpacing: "-0.02em",
+                  }}
+                >
+                  {prediction.predicted_engagement_score.toFixed(1)}
+                </div>
+                <div
+                  style={{
+                    fontSize: "13px",
+                    color: "#7c3aed",
+                    marginTop: "8px",
+                  }}
+                >
+                  Strong engagement expected
+                </div>
               </div>
-              <div
-                style={{
-                  fontSize: "48px",
-                  fontWeight: 700,
-                  color: "#6c3bfe",
-                  letterSpacing: "-0.02em",
-                }}
-              >
-                {prediction.predicted_engagement_score.toFixed(1)}
-              </div>
-              <div
-                style={{ fontSize: "13px", color: "#7c3aed", marginTop: "8px" }}
-              >
-                Strong engagement expected
-              </div>
-            </div>
-          )}
+            )}
 
           {error && (
             <div className="alert alert-error" style={{ marginTop: "16px" }}>

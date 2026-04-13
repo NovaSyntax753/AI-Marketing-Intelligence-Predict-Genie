@@ -10,24 +10,28 @@ A production-ready AI-powered marketing analytics and prediction platform built 
 ## 🚀 Features
 
 ### MODULE 1 — Data Ingestion
+
 - ✅ Upload CSV marketing/social media datasets
 - ✅ Support for multiple platforms (Instagram, Facebook, Twitter, LinkedIn, TikTok, YouTube)
 - ✅ Data validation layer
 - ✅ PostgreSQL storage with engagement rate calculation
 
 ### MODULE 2 — Analytics Engine
+
 - ✅ Engagement rate calculation
 - ✅ Performance grouping by platform, content type, and posting time
 - ✅ Top-performing content detection
 - ✅ Interactive charts and visualizations
 
 ### MODULE 3 — Prediction Engine
+
 - ✅ Random Forest regression model
 - ✅ Predict engagement based on post_type, posting_time, and platform
 - ✅ Model training with historical data
 - ✅ Confidence scoring
 
 ### MODULE 4 — AI Recommendation Engine
+
 - ✅ Best posting time recommendations
 - ✅ Optimal content type suggestions
 - ✅ Platform performance insights
@@ -35,6 +39,7 @@ A production-ready AI-powered marketing analytics and prediction platform built 
 - ✅ Actionable marketing strategies
 
 ### MODULE 5 — Dashboard UI
+
 - ✅ Modern, clean interface with Tailwind CSS
 - ✅ Upload dataset page
 - ✅ Interactive analytics charts (Recharts)
@@ -42,6 +47,7 @@ A production-ready AI-powered marketing analytics and prediction platform built 
 - ✅ Comprehensive recommendations panel
 
 ### MODULE 6 — Deployment
+
 - ✅ Docker & Docker Compose support
 - ✅ Production-ready configuration
 - ✅ Environment-based settings
@@ -56,14 +62,43 @@ A production-ready AI-powered marketing analytics and prediction platform built 
 
 ## 🛠️ Installation & Setup
 
+### Option 0: One Command Local Run (Frontend + Backend)
+
+Use this if you want the shortest workflow.
+
+1. **Install root tooling (once)**
+
+   ```bash
+   npm install
+   ```
+
+2. **Install frontend dependencies (once)**
+
+   ```bash
+   npm --prefix frontend_run install
+   ```
+
+3. **Run both backend + frontend together**
+   ```bash
+   npm run dev
+   ```
+
+This starts:
+
+- Frontend: http://localhost:3000
+- Backend API: http://127.0.0.1:8000
+- API Docs: http://127.0.0.1:8000/docs
+
 ### Option 1: Using Docker (Recommended)
 
 1. **Clone the repository**
+
    ```bash
    cd "AI Marketing Intelligence Predict Genie"
    ```
 
 2. **Start all services with Docker Compose**
+
    ```bash
    docker-compose up --build
    ```
@@ -83,22 +118,25 @@ A production-ready AI-powered marketing analytics and prediction platform built 
 #### Backend Setup
 
 1. **Navigate to backend directory**
+
    ```bash
    cd backend
    ```
 
 2. **Create virtual environment**
+
    ```bash
    python -m venv venv
-   
+
    # Windows
    venv\Scripts\activate
-   
+
    # Linux/Mac
    source venv/bin/activate
    ```
 
 3. **Install dependencies**
+
    ```bash
    pip install -r requirements.txt
    ```
@@ -109,11 +147,13 @@ A production-ready AI-powered marketing analytics and prediction platform built 
    - Update `.env` file with your database credentials
 
 5. **Create .env file**
+
    ```bash
    cp .env.example .env
    ```
-   
+
    Edit `.env`:
+
    ```
    DATABASE_URL=postgresql://postgres:your_password@localhost:5432/predict_genie
    HOST=0.0.0.0
@@ -130,21 +170,25 @@ A production-ready AI-powered marketing analytics and prediction platform built 
 #### Frontend Setup
 
 1. **Navigate to frontend directory**
+
    ```bash
    cd frontend
    ```
 
 2. **Install dependencies**
+
    ```bash
    npm install
    ```
 
 3. **Create .env.local file**
+
    ```bash
    NEXT_PUBLIC_API_URL=http://localhost:8000
    ```
 
 4. **Run the frontend**
+
    ```bash
    npm run dev
    ```
@@ -171,6 +215,7 @@ A production-ready AI-powered marketing analytics and prediction platform built 
 4. Click "Upload Dataset"
 
 **Sample CSV Format:**
+
 ```csv
 platform,impressions,likes,comments,shares,post_type,caption,timestamp
 instagram,1000,150,20,10,image,"Check this out!",2024-01-15 10:30:00
@@ -181,6 +226,7 @@ twitter,500,75,15,30,text,"Great news!",2024-01-17 09:00:00
 ### 2. View Analytics
 
 Navigate to the **Analytics** page to see:
+
 - Total posts and average engagement rate
 - Platform performance comparison
 - Content type analysis
@@ -201,6 +247,7 @@ Navigate to the **Analytics** page to see:
 ### 4. Get AI Recommendations
 
 Navigate to the **Recommendations** page to receive:
+
 - Best posting times for maximum engagement
 - Optimal content types for your audience
 - Top-performing platforms
@@ -210,28 +257,34 @@ Navigate to the **Recommendations** page to receive:
 ## 🔌 API Endpoints
 
 ### Data Ingestion
+
 - `POST /upload-data` - Upload CSV dataset
 - `POST /add-record` - Add single marketing record
 
 ### Analytics
+
 - `GET /analytics` - Get comprehensive analytics
 - `GET /analytics/platform-comparison` - Platform performance
 - `GET /analytics/content-type` - Content type analysis
 - `GET /analytics/time-analysis` - Time-based analysis
 
 ### Prediction
+
 - `POST /train-model` - Train ML model
 - `POST /predict` - Predict engagement
 
 ### Recommendations
+
 - `GET /recommendations` - Get AI recommendations
 
 ### Data Management
+
 - `GET /data/count` - Get total record count
 - `GET /data/recent` - Get recent records
 - `DELETE /data/clear` - Clear all data
 
 ### Health Check
+
 - `GET /` - API welcome message
 - `GET /health` - Health check
 
@@ -277,6 +330,7 @@ AI Marketing Intelligence Predict Genie/
 ## 🧪 Technology Stack
 
 ### Frontend
+
 - **Framework:** Next.js 14 (React 18)
 - **Language:** TypeScript
 - **Styling:** Tailwind CSS
@@ -285,6 +339,7 @@ AI Marketing Intelligence Predict Genie/
 - **Icons:** React Icons
 
 ### Backend
+
 - **Framework:** FastAPI
 - **Language:** Python 3.11
 - **ORM:** SQLAlchemy
@@ -292,16 +347,19 @@ AI Marketing Intelligence Predict Genie/
 - **ML Libraries:** scikit-learn, pandas, numpy
 
 ### Database
+
 - **DBMS:** PostgreSQL 15
 - **Driver:** psycopg2-binary
 
 ### Deployment
+
 - **Containerization:** Docker & Docker Compose
 - **Web Server:** Uvicorn (ASGI)
 
 ## 📈 ML Model Details
 
 The prediction engine uses a **Random Forest Regressor** with the following:
+
 - **Features:** Platform (encoded), Post Type (encoded), Posting Hour
 - **Target:** Engagement Rate
 - **Model Parameters:**
@@ -314,6 +372,7 @@ The model is trained on your historical marketing data and improves with more da
 ## 🐛 Troubleshooting
 
 ### Database Connection Issues
+
 ```bash
 # Check if PostgreSQL is running
 docker ps
@@ -324,6 +383,7 @@ docker-compose up --build
 ```
 
 ### Frontend Not Loading
+
 ```bash
 # Clear Next.js cache
 cd frontend
@@ -332,6 +392,7 @@ npm run dev
 ```
 
 ### Backend Errors
+
 ```bash
 # Check logs
 docker-compose logs backend
@@ -341,6 +402,7 @@ docker-compose restart backend
 ```
 
 ### Model Training Fails
+
 - Ensure you have at least 10 records in the database
 - Check that your data has varied platforms and post types
 
@@ -360,12 +422,13 @@ docker-compose restart backend
    - Set secure secrets
 
 2. **Build for production**
+
    ```bash
    # Frontend
    cd frontend
    npm run build
    npm start
-   
+
    # Backend
    cd backend
    gunicorn main:app -w 4 -k uvicorn.workers.UvicornWorker
@@ -409,6 +472,8 @@ Built with ❤️ using AI-assisted development
 **Found a bug?** Please open an issue with details.
 
 **Want to contribute?** Pull requests are welcome!
-#   n e w P r e d i c t G e n e i  
- #   n e w P r e d i c t G e n e i  
+#   n e w P r e d i c t G e n e i 
+ 
+ #   n e w P r e d i c t G e n e i 
+ 
  

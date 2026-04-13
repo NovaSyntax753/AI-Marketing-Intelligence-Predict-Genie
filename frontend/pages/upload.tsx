@@ -1,28 +1,74 @@
-import React, { useState } from 'react';
-import Layout from '@/components/Layout';
-import { uploadDataset } from '@/lib/api';
-import { FaUpload, FaCheckCircle, FaExclamationCircle } from 'react-icons/fa';
+import React, { useState, useRef } from "react";
+import Layout from "@/components/Layout";
+import { uploadDataset } from "@/lib/api";
+import {
+  FiUploadCloud,
+  FiCheck,
+  FiAlertCircle,
+  FiFile,
+  FiX,
+} from "react-icons/fi";
+
+interface UploadResult {
+  success: boolean;
+  records_added: number;
+  total_rows: number;
+  errors?: string[];
+}
+
+const SCHEMA = [
+  { col: "user_id", type: "string", note: "Unique user ID (e.g. U1)" },
+  { col: "Followers_count", type: "integer", note: "Number of followers" },
+  { col: "Post_ID", type: "integer", note: "Post identifier" },
+  { col: "Post_Date", type: "date", note: "YYYY-MM-DD or YYYY-MM-DD HH:MM:SS" },
+  { col: "Post_type", type: "string", note: "image | video | reel | text" },
+  { col: "Likes", type: "integer", note: "Number of likes" },
+  { col: "Comments", type: "integer", note: "Number of comments" },
+  { col: "Reposts", type: "integer", note: "Number of reposts / shares" },
+  {
+    col: "Engagement_score",
+    type: "float",
+    note: "Pre-calculated engagement score",
+  },
+];
 
 export default function Upload() {
   const [file, setFile] = useState<File | null>(null);
+  const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<UploadResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
-      setResult(null);
-      setError(null);
+  const handleFile = (f: File) => {
+    if (!f.name.endsWith(".csv")) {
+      setError("Only CSV files are supported.");
+      return;
     }
+    setFile(f);
+    setResult(null);
+    setError(null);
+  };
+
+  const onInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files?.[0]) handleFile(e.target.files[0]);
+  };
+
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragging(false);
+    if (e.dataTransfer.files?.[0]) handleFile(e.dataTransfer.files[0]);
+  };
+
+  const clearFile = () => {
+    setFile(null);
+    setResult(null);
+    setError(null);
+    if (inputRef.current) inputRef.current.value = "";
   };
 
   const handleUpload = async () => {
-    if (!file) {
-      setError('Please select a CSV file first');
-      return;
-    }
-
+    if (!file) return;
     setUploading(true);
     setError(null);
     setResult(null);
@@ -31,402 +77,242 @@ export default function Upload() {
       const data = await uploadDataset(file);
       setResult(data);
       setFile(null);
-
-      const fileInput = document.getElementById('file-upload') as HTMLInputElement;
-      if (fileInput) fileInput.value = '';
-    } catch (err: any) {
-      setError(err?.response?.data?.detail || 'Failed to upload file');
+      if (inputRef.current) inputRef.current.value = "";
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { detail?: string } } })?.response?.data
+          ?.detail ?? "Upload failed. Please check your file and try again.";
+      setError(msg);
     } finally {
       setUploading(false);
     }
   };
 
   return (
-    <Layout>
-      <div className="max-w-4xl mx-auto space-y-8">
-
-        <div className="text-center">
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">
-            Upload Dataset
-          </h1>
-          <p className="text-gray-600">
-            Upload your social media dataset CSV to analyze engagement performance
-          </p>
-        </div>
-
-        <div className="card">
-          <div className="space-y-6">
-
-            {/* Upload Box */}
-
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-primary transition-colors">
-
-              <FaUpload className="text-5xl text-gray-400 mx-auto mb-4" />
-
-              <label htmlFor="file-upload" className="cursor-pointer">
-
-                <span className="text-primary font-semibold">
-                  Choose a CSV file
-                </span>
-
-                <span className="text-gray-600"> or drag and drop</span>
-
-                <input
-                  id="file-upload"
-                  type="file"
-                  accept=".csv"
-                  onChange={handleFileChange}
-                  className="hidden"
-                />
-
-              </label>
-
-              <p className="text-sm text-gray-500 mt-2">
-                CSV files only
-              </p>
-
+    <Layout
+      title="Upload"
+      subtitle="Import your social media CSV to begin analysis"
+      recordCount={0}
+    >
+      <div style={{ maxWidth: "680px", margin: "0 auto" }}>
+        {/* Dropzone */}
+        {!file && !result && (
+          <div
+            className={`dropzone ${dragging ? "drag-over" : ""}`}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragging(true);
+            }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={onDrop}
+            onClick={() => inputRef.current?.click()}
+            style={{ marginBottom: "24px" }}
+          >
+            <input
+              ref={inputRef}
+              id="file-upload"
+              type="file"
+              accept=".csv"
+              onChange={onInputChange}
+              style={{ display: "none" }}
+            />
+            <div className="dropzone-icon">
+              <FiUploadCloud size={24} />
             </div>
+            <div className="dropzone-title">
+              Drop your CSV here, or click to browse
+            </div>
+            <div className="dropzone-sub">Supports .csv files · Max 50 MB</div>
+          </div>
+        )}
 
-            {/* Selected File */}
-
-            {file && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p className="text-sm text-gray-700">
-                  <strong>Selected:</strong> {file.name}
-                </p>
-                <p className="text-sm text-gray-600">
-                  Size: {(file.size / 1024).toFixed(2)} KB
-                </p>
-              </div>
-            )}
-
-            {/* Upload Button */}
-
-            <button
-              onClick={handleUpload}
-              disabled={!file || uploading}
-              className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
+        {/* File Selected */}
+        {file && (
+          <div
+            className="card"
+            style={{
+              marginBottom: "16px",
+              display: "flex",
+              alignItems: "center",
+              gap: "16px",
+            }}
+          >
+            <div
+              style={{
+                width: "44px",
+                height: "44px",
+                background: "#ede9fe",
+                borderRadius: "10px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+              }}
             >
-              {uploading ? 'Uploading...' : 'Upload Dataset'}
+              <FiFile size={20} color="#6c3bfe" />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div
+                style={{
+                  fontWeight: 600,
+                  fontSize: "14px",
+                  color: "#0f172a",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                {file.name}
+              </div>
+              <div
+                style={{ fontSize: "12px", color: "#94a3b8", marginTop: "2px" }}
+              >
+                {(file.size / 1024).toFixed(1)} KB
+              </div>
+            </div>
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={clearFile}
+              aria-label="Remove file"
+            >
+              <FiX size={14} />
             </button>
-
-            {/* Success Message */}
-
-            {result && result.success && (
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-
-                <div className="flex items-start">
-
-                  <FaCheckCircle className="text-green-500 text-xl mt-1 mr-3" />
-
-                  <div>
-
-                    <h3 className="font-semibold text-green-900">
-                      Upload Successful
-                    </h3>
-
-                    <p className="text-sm text-green-700 mt-1">
-                      {result.message}
-                    </p>
-
-                    {/* <div className="mt-2 text-sm text-green-700">
-
-                      <p>Records added: {result.records_added}</p>
-
-                      <p>Total rows processed: {result.total_rows}</p>
-
-                    </div> */}
-
-                  </div>
-
-                </div>
-
-              </div>
-            )}
-
-            {/* Error Message */}
-
-            {error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-
-                <div className="flex items-start">
-
-                  <FaExclamationCircle className="text-red-500 text-xl mt-1 mr-3" />
-
-                  <div>
-
-                    <h3 className="font-semibold text-red-900">
-                      Upload Failed
-                    </h3>
-
-                    <p className="text-sm text-red-700 mt-1">
-                      {error}
-                    </p>
-
-                  </div>
-
-                </div>
-
-              </div>
-            )}
-
           </div>
-        </div>
+        )}
 
-        {/* CSV Format Guide */}
+        {/* Upload Button */}
+        {file && (
+          <button
+            className="btn btn-primary"
+            style={{ width: "100%", marginBottom: "24px" }}
+            onClick={handleUpload}
+            disabled={uploading}
+          >
+            {uploading ? (
+              <>
+                <div
+                  className="spinner"
+                  style={{ width: "14px", height: "14px" }}
+                />
+                Uploading…
+              </>
+            ) : (
+              <>
+                <FiUploadCloud size={14} />
+                Upload Dataset
+              </>
+            )}
+          </button>
+        )}
 
-        <div className="card bg-gray-50">
+        {/* Success Alert */}
+        {result?.success && (
+          <div className="alert alert-success" style={{ marginBottom: "24px" }}>
+            <FiCheck size={18} />
+            <div>
+              <div className="alert-title">Upload successful!</div>
+              <div className="alert-body">
+                {result.records_added} records imported from {result.total_rows}{" "}
+                rows
+              </div>
+            </div>
+          </div>
+        )}
 
-          <h3 className="text-xl font-semibold mb-4">
-            Required CSV Format
-          </h3>
+        {/* Error Alert */}
+        {error && (
+          <div className="alert alert-error" style={{ marginBottom: "24px" }}>
+            <FiAlertCircle size={18} />
+            <div>
+              <div className="alert-title">Upload failed</div>
+              <div className="alert-body">{error}</div>
+            </div>
+          </div>
+        )}
 
-          <p className="text-gray-600 mb-4">
-            Your CSV file must contain the following columns:
-          </p>
+        {/* Schema Info */}
+        <div className="card">
+          <div className="card-title">Expected CSV Format</div>
+          <div className="card-subtitle">
+            Your file should include these columns:
+          </div>
 
-          <div className="overflow-x-auto">
-
-            <table className="min-w-full divide-y divide-gray-300">
-
-              <thead className="bg-gray-100">
-
-                <tr>
-                  <th className="px-4 py-2 text-left text-sm font-semibold">Column</th>
-                  <th className="px-4 py-2 text-left text-sm font-semibold">Type</th>
-                  <th className="px-4 py-2 text-left text-sm font-semibold">Description</th>
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", fontSize: "13px" }}>
+              <thead>
+                <tr style={{ borderBottom: "1px solid #eef1f7" }}>
+                  <th
+                    style={{
+                      textAlign: "left",
+                      padding: "8px 0",
+                      fontWeight: 600,
+                      color: "#94a3b8",
+                      fontSize: "11px",
+                    }}
+                  >
+                    Column
+                  </th>
+                  <th
+                    style={{
+                      textAlign: "left",
+                      padding: "8px 0",
+                      fontWeight: 600,
+                      color: "#94a3b8",
+                      fontSize: "11px",
+                    }}
+                  >
+                    Type
+                  </th>
+                  <th
+                    style={{
+                      textAlign: "left",
+                      padding: "8px 0",
+                      fontWeight: 600,
+                      color: "#94a3b8",
+                      fontSize: "11px",
+                    }}
+                  >
+                    Description
+                  </th>
                 </tr>
-
               </thead>
-
-              <tbody className="divide-y divide-gray-200">
-
-                 <tr>
-          <td className="px-4 py-2 text-sm font-mono">name</td>
-          <td className="px-4 py-2 text-sm">string</td>
-          <td className="px-4 py-2 text-sm">Unique user identifier</td>
-        </tr>
-
-        <tr>
-          <td className="px-4 py-2 text-sm font-mono">follower_count</td>
-          <td className="px-4 py-2 text-sm">integer</td>
-          <td className="px-4 py-2 text-sm">Number of followers (≥ 0)</td>
-        </tr>
-
-        <tr>
-          <td className="px-4 py-2 text-sm font-mono">post_type</td>
-          <td className="px-4 py-2 text-sm">string</td>
-          <td className="px-4 py-2 text-sm">Type of content (image, reel, video)</td>
-        </tr>
-
-        <tr>
-          <td className="px-4 py-2 text-sm font-mono">like_count</td>
-          <td className="px-4 py-2 text-sm">integer</td>
-          <td className="px-4 py-2 text-sm">Number of likes (≥ 0)</td>
-        </tr>
-
-        <tr>
-          <td className="px-4 py-2 text-sm font-mono">comment_count</td>
-          <td className="px-4 py-2 text-sm">integer</td>
-          <td className="px-4 py-2 text-sm">Number of comments (≥ 0)</td>
-        </tr>
-
-        <tr>
-          <td className="px-4 py-2 text-sm font-mono">repost_count</td>
-          <td className="px-4 py-2 text-sm">integer</td>
-          <td className="px-4 py-2 text-sm">Number of reposts (≥ 0)</td>
-        </tr>
-
-        <tr>
-          <td className="px-4 py-2 text-sm font-mono">hashtag_count</td>
-          <td className="px-4 py-2 text-sm">integer</td>
-          <td className="px-4 py-2 text-sm">Number of hashtags (≥ 0)</td>
-        </tr>
-
-        <tr>
-          <td className="px-4 py-2 text-sm font-mono">mention_count</td>
-          <td className="px-4 py-2 text-sm">integer</td>
-          <td className="px-4 py-2 text-sm">Number of mentions (≥ 0)</td>
-        </tr>
-
-        <tr>
-          <td className="px-4 py-2 text-sm font-mono">CTA_used</td>
-          <td className="px-4 py-2 text-sm">string</td>
-          <td className="px-4 py-2 text-sm">Call-to-action used (default "NO_CTA")</td>
-        </tr>
+              <tbody>
+                {SCHEMA.map((row) => (
+                  <tr
+                    key={row.col}
+                    style={{ borderBottom: "1px solid #f8fafc" }}
+                  >
+                    <td
+                      style={{
+                        padding: "10px 0",
+                        fontFamily: "monospace",
+                        color: "#6c3bfe",
+                        fontWeight: 500,
+                      }}
+                    >
+                      {row.col}
+                    </td>
+                    <td style={{ padding: "10px 0" }}>
+                      <span
+                        className="pill"
+                        style={{
+                          background: "#f1f5f9",
+                          color: "#475569",
+                          fontSize: "10px",
+                        }}
+                      >
+                        {row.type}
+                      </span>
+                    </td>
+                    <td style={{ padding: "10px 0", color: "#64748b" }}>
+                      {row.note}
+                    </td>
+                  </tr>
+                ))}
               </tbody>
-
             </table>
-
           </div>
-
-          <div className="mt-4 p-4 bg-white rounded border">
-
-            <p className="text-sm font-semibold mb-2">
-              Example CSV
-            </p>
-
-            <pre className="text-xs text-gray-700 overflow-x-auto">
-
-name,follower_count,post_type,like_count,comment_count,repost_count,hashtag_count,mention_count,CTA_used
-U1,5592,image,120,10,2,5,1,NO_CTA
-U2,60000,video,400,50,20,10,2,NO_CTA
-
-            </pre>
-
-          </div>
-
         </div>
-
       </div>
     </Layout>
   );
 }
-
-// import React, { useState, useRef } from 'react';
-// import Layout from '@/components/Layout';
-// import { uploadDataset } from '@/lib/api';
-// import { FaUpload, FaCheckCircle, FaExclamationCircle } from 'react-icons/fa';
-
-// // Types
-// interface UploadResult {
-//   success: boolean;
-//   message: string;
-//   records_added: number;
-//   total_rows: number;
-// }
-
-// export default function Upload() {
-
-//   const [file, setFile] = useState<File | null>(null);
-//   const [uploading, setUploading] = useState(false);
-//   const [result, setResult] = useState<UploadResult | null>(null);
-//   const [error, setError] = useState<string | null>(null);
-
-//   const fileInputRef = useRef<HTMLInputElement>(null);
-
-//   // File validation
-//   const validateFile = (file: File) => {
-//     if (!file.name.endsWith('.csv')) {
-//       return "Only CSV files are allowed";
-//     }
-
-//     if (file.size > 5 * 1024 * 1024) {
-//       return "File size should be less than 5MB";
-//     }
-
-//     return null;
-//   };
-
-//   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-//     const selected = e.target.files?.[0];
-//     if (!selected) return;
-
-//     const validationError = validateFile(selected);
-//     if (validationError) {
-//       setError(validationError);
-//       return;
-//     }
-
-//     setFile(selected);
-//     setError(null);
-//     setResult(null);
-//   };
-
-//   // Upload
-//   const handleUpload = async () => {
-//     if (!file) {
-//       setError('Please select a CSV file first');
-//       return;
-//     }
-
-//     setUploading(true);
-//     setError(null);
-//     setResult(null);
-
-//     try {
-//       const data = await uploadDataset(file);
-//       setResult(data);
-//       setFile(null);
-
-//       if (fileInputRef.current) {
-//         fileInputRef.current.value = '';
-//       }
-
-//     } catch (err: any) {
-//       setError(err?.response?.data?.detail || 'Failed to upload file');
-//     } finally {
-//       setUploading(false);
-//     }
-//   };
-
-//   return (
-//     <Layout>
-
-//       <div className="max-w-4xl mx-auto space-y-8">
-
-//         {/* Header */}
-//         <div className="text-center">
-//           <h1 className="text-3xl font-bold mb-4">Upload Dataset</h1>
-//           <p className="text-gray-600">
-//             Upload your social media dataset CSV
-//           </p>
-//         </div>
-
-//         {/* Upload Box */}
-//         <div className="card text-center">
-
-//           <FaUpload className="text-5xl text-gray-400 mx-auto mb-4" />
-
-//           <label htmlFor="file-upload" className="cursor-pointer">
-//             <span className="text-primary font-semibold">Choose CSV</span>
-//           </label>
-
-//           <input
-//             ref={fileInputRef}
-//             id="file-upload"
-//             type="file"
-//             accept=".csv"
-//             onChange={handleFileChange}
-//             className="hidden"
-//           />
-
-//           {file && (
-//             <div className="mt-4 text-sm">
-//               <p><strong>{file.name}</strong></p>
-//               <p>{(file.size / 1024).toFixed(2)} KB</p>
-//             </div>
-//           )}
-
-//           <button
-//             onClick={handleUpload}
-//             disabled={!file || uploading}
-//             className="btn-primary w-full mt-4"
-//           >
-//             {uploading ? 'Uploading...' : 'Upload Dataset'}
-//           </button>
-
-//         </div>
-
-//         {/* Success */}
-//         {result?.success && (
-//           <div className="bg-green-50 border p-4 rounded">
-//             <FaCheckCircle className="text-green-500 mb-2" />
-//             <p>{result.message}</p>
-//             <p>Records: {result.records_added}</p>
-//           </div>
-//         )}
-
-//         {/* Error */}
-//         {error && (
-//           <div className="bg-red-50 border p-4 rounded text-red-600">
-//             <FaExclamationCircle className="mb-2" />
-//             {error}
-//           </div>
-//         )}
-
-//       </div>
-
-//     </Layout>
-//   );
-// }

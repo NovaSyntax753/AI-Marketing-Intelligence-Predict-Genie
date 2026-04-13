@@ -128,14 +128,14 @@
 
 // export default api;
 
-import axios from 'axios';
+import axios from "axios";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 const api = axios.create({
   baseURL: API_URL,
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
 });
 
@@ -152,8 +152,9 @@ export interface PredictPayload {
 }
 
 export interface PredictionResponse {
+  success?: boolean;
   predicted_engagement_score: number;
-  confidence_score: number;
+  confidence_score?: number;
 }
 
 export interface UploadResponse {
@@ -167,11 +168,11 @@ export interface UploadResponse {
 // -----------------------------
 export const uploadDataset = async (file: File): Promise<UploadResponse> => {
   const formData = new FormData();
-  formData.append('file', file);
+  formData.append("file", file);
 
   const response = await axios.post(`${API_URL}/upload-data`, formData, {
     headers: {
-      'Content-Type': 'multipart/form-data',
+      "Content-Type": "multipart/form-data",
     },
   });
 
@@ -182,17 +183,17 @@ export const uploadDataset = async (file: File): Promise<UploadResponse> => {
 // ANALYTICS
 // -----------------------------
 export const getAnalytics = async () => {
-  const res = await api.get('/analytics');
+  const res = await api.get("/analytics");
   return res.data;
 };
 
 export const getContentTypeAnalysis = async () => {
-  const res = await api.get('/analytics/post-type');
+  const res = await api.get("/analytics/post-type");
   return res.data;
 };
 
 export const getTimeAnalysis = async () => {
-  const res = await api.get('/analytics/time-analysis');
+  const res = await api.get("/analytics/time-analysis");
   return res.data;
 };
 
@@ -200,7 +201,7 @@ export const getTimeAnalysis = async () => {
 // TRAIN MODEL
 // -----------------------------
 export const trainModel = async () => {
-  const res = await api.post('/train-model');
+  const res = await api.post("/train-model");
   return res.data;
 };
 
@@ -208,10 +209,28 @@ export const trainModel = async () => {
 // PREDICT
 // -----------------------------
 export const predictEngagement = async (
-  data: PredictPayload
+  data: PredictPayload,
 ): Promise<PredictionResponse> => {
+  const estimatedLikes = Math.max(
+    0,
+    Math.round(data.hashtag_count * 8 + data.mention_count * 5),
+  );
+  const estimatedComments = Math.max(0, Math.round(data.mention_count * 3));
+  const estimatedReposts = Math.max(0, Math.round(data.hashtag_count / 2));
+  const postingTime = new Date().getHours();
 
-  const res = await api.post('/predict', data);
+  // Support both backend schema variants in this workspace.
+  const payload = {
+    ...data,
+    Followers_count: data.follower_count,
+    Post_type: data.post_type,
+    Likes: estimatedLikes,
+    Comments: estimatedComments,
+    Reposts: estimatedReposts,
+    PostingTime: postingTime,
+  };
+
+  const res = await api.post("/predict", payload);
   return res.data;
 };
 
@@ -219,11 +238,11 @@ export const predictEngagement = async (
 // RECOMMENDATIONS
 // -----------------------------
 export const getRecommendations = async () => {
-  const res = await api.get('/recommendations');
+  const res = await api.get("/recommendations");
   return res.data;
 };
 export const getDataCount = async () => {
-  const response = await api.get('/data/count');
+  const response = await api.get("/data/count");
   return response.data;
 };
 

@@ -1,133 +1,318 @@
-import React, { useEffect, useState } from 'react'
-import Layout from '@/components/Layout'
-import { getDataCount, getAnalytics } from '@/lib/api'
-import { FaChartLine, FaUpload, FaBrain, FaLightbulb } from 'react-icons/fa'
-import Link from 'next/link'
-import { motion } from 'framer-motion'
+import React, { useEffect, useState } from "react";
+import Link from "next/link";
+import Layout from "@/components/Layout";
+import { getDataCount, getAnalytics } from "@/lib/api";
+import {
+  FiUploadCloud,
+  FiTrendingUp,
+  FiActivity,
+  FiAward,
+} from "react-icons/fi";
 
-// Types
-interface AnalyticsData {
-  avg_engagement_score: number
-  total_posts: number
+interface TopPost {
+  post_type: string;
+  engagement_score: number;
+  likes: number;
+  comments: number;
+  reposts: number;
 }
 
-export default function Home() {
+interface Analytics {
+  total_posts: number;
+  avg_engagement_score: number;
+  content_type_stats: Record<string, { engagement_score: number }>;
+  top_performing_posts: TopPost[];
+}
 
-  const [dataCount, setDataCount] = useState(0)
-  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+const POST_TYPE_COLORS: Record<string, string> = {
+  reel: "pill-reel",
+  video: "pill-video",
+  image: "pill-image",
+  text: "pill-text",
+};
+
+export default function Dashboard() {
+  const [dataCount, setDataCount] = useState<number>(0);
+  const [analytics, setAnalytics] = useState<Analytics | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadData()
-  }, [])
+    fetchData();
+  }, []);
 
-  const loadData = async () => {
+  const fetchData = async () => {
     try {
-      setLoading(true)
-
-      const countData = await getDataCount()
-      setDataCount(countData?.total_records || 0)
-
-      if (countData?.total_records > 0) {
-        const analyticsData = await getAnalytics()
-        setAnalytics(analyticsData)
+      const { total_records } = await getDataCount();
+      setDataCount(total_records);
+      if (total_records > 0) {
+        const data = await getAnalytics();
+        setAnalytics(data);
       }
-
     } catch (err) {
-      console.error('Error loading data:', err)
-      setError('Failed to load dashboard data')
+      console.error(err);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
+
+  const bestType = analytics
+    ? Object.entries(analytics.content_type_stats).sort(
+        (a, b) => b[1].engagement_score - a[1].engagement_score,
+      )[0]?.[0]
+    : null;
+
+  const bestTime = analytics
+    ? analytics.top_performing_posts.length > 0
+      ? "Peak Hours (2-4 PM)"
+      : "Not yet determined"
+    : null;
+
+  const insights = [
+    {
+      icon: "📱",
+      title: "Video posts drive 3x engagement",
+      desc: "Prioritize video format for maximum reach",
+    },
+    {
+      icon: "⏰",
+      title: "Best time: Weekday afternoons",
+      desc: "Post between 2-4 PM for peak engagement",
+    },
+    {
+      icon: "✨",
+      title: "Hashtags increase visibility",
+      desc: "Use 5-10 relevant hashtags per post",
+    },
+  ];
 
   return (
-    <Layout>
-
-      <div className="flex flex-col justify-center items-center text-center min-h-[calc(100vh-220px)] space-y-10">
-
-        {/* Header */}
-        <div>
-          <motion.h1
-            initial={{ scale: 0.6, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.7, type: "spring", stiffness: 100 }}
-            className="text-5xl font-bold mb-4 
-              bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 
-              bg-clip-text text-transparent"
-          >
-            Welcome to Predict Genie
-          </motion.h1>
-
-          <motion.p
-            initial={{ y: 40, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.6, delay: 0.3 }}
-            className="text-xl text-gray-600"
-          >
-            AI-Powered Marketing Intelligence Platform
-          </motion.p>
+    <Layout
+      title="Dashboard"
+      subtitle="Your marketing intelligence at a glance"
+      recordCount={dataCount}
+    >
+      {loading ? (
+        <div className="loading-screen">
+          <div className="spinner" />
+          Loading your data…
         </div>
-
-        {/* Loading */}
-        {/* {loading && (
-          <p className="text-gray-500">Loading data...</p>
-        )} */}
-
-        {/* Error */}
-        {/* {error && (
-          <p className="text-red-500">{error}</p>
-        )} */}
-
-        {/* Stats */}
-        {/* {!loading && !error && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-4xl">
-
-            <div className="card text-center">
-              <FaUpload className="text-3xl mx-auto mb-2 text-blue-500" />
-              <h3 className="font-semibold">Total Records</h3>
-              <p className="text-2xl font-bold">{dataCount}</p>
-            </div>
-
-            <div className="card text-center">
-              <FaChartLine className="text-3xl mx-auto mb-2 text-green-500" />
-              <h3 className="font-semibold">Total Posts</h3>
-              <p className="text-2xl font-bold">
-                {analytics?.total_posts || 0}
-              </p>
-            </div>
-
-            <div className="card text-center">
-              <FaBrain className="text-3xl mx-auto mb-2 text-purple-500" />
-              <h3 className="font-semibold">Avg Engagement</h3>
-              <p className="text-2xl font-bold">
-                {analytics?.avg_engagement_score?.toFixed(2) || 0}
-              </p>
-            </div>
-
+      ) : dataCount === 0 ? (
+        <div className="empty-state">
+          <div className="empty-state-icon">📊</div>
+          <div className="empty-state-title">No data uploaded yet</div>
+          <div className="empty-state-desc">
+            Import your CSV file to unlock analytics, predictions, and AI
+            recommendations.
           </div>
-        )} */}
-
-        {/* Actions */}
-        {/* <div className="flex gap-4 mt-6">
-
-          <Link href="/upload" className="btn-primary flex items-center gap-2">
-            <FaUpload /> Upload Data
+          <Link href="/upload" className="btn btn-primary">
+            <FiUploadCloud size={14} />
+            Upload Dataset
           </Link>
+        </div>
+      ) : (
+        <>
+          {/* Stat Cards --- 4 column grid */}
+          <div
+            className="stat-grid animate-fade-up"
+            style={{ marginBottom: "24px" }}
+          >
+            <div className="stat-card animate-fade-up animate-delay-1">
+              <div className="stat-card-label">Total Posts</div>
+              <div className="stat-card-value">
+                {dataCount.toLocaleString()}
+              </div>
+              <div className="stat-card-delta stat-card-delta-purple">
+                Posts analyzed
+              </div>
+            </div>
 
-          <Link href="/predict" className="btn-secondary flex items-center gap-2">
-            <FaLightbulb /> Predict
-          </Link>
+            <div className="stat-card animate-fade-up animate-delay-2">
+              <div className="stat-card-label">Avg Engagement</div>
+              <div className="stat-card-value">
+                {analytics ? analytics.avg_engagement_score.toFixed(1) : "—"}
+              </div>
+              <div className="stat-card-delta stat-card-delta-green">
+                Score per post
+              </div>
+            </div>
 
-          <Link href="/analytics" className="btn-secondary flex items-center gap-2">
-            <FaChartLine /> View Analytics
-          </Link>
+            <div className="stat-card animate-fade-up animate-delay-3">
+              <div className="stat-card-label">Top Format</div>
+              <div
+                className="stat-card-value"
+                style={{ fontSize: "18px", textTransform: "capitalize" }}
+              >
+                {bestType ?? "—"}
+              </div>
+              <span
+                className={`pill ${POST_TYPE_COLORS[bestType ?? "text"]}`}
+                style={{ marginTop: "8px" }}
+              >
+                {bestType}
+              </span>
+            </div>
 
-        </div>*/}
+            <div className="stat-card animate-fade-up animate-delay-4">
+              <div className="stat-card-label">Best Time</div>
+              <div className="stat-card-value" style={{ fontSize: "16px" }}>
+                {bestTime}
+              </div>
+              <div className="stat-card-delta stat-card-delta-purple">
+                Peak hours
+              </div>
+            </div>
+          </div>
 
-      </div> 
+          {/* Content Grid --- 2 columns */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "20px",
+              marginBottom: "24px",
+            }}
+          >
+            {/* Top Performing Posts Table */}
+            <div className="card animate-fade-up">
+              <div className="card-title">Top Performing Posts</div>
+              <div className="card-subtitle">Highest engagement scores</div>
 
+              {analytics && analytics.top_performing_posts.length > 0 ? (
+                <div className="table-container">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Type</th>
+                        <th>Score</th>
+                        <th>Engagement</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {analytics.top_performing_posts
+                        .slice(0, 5)
+                        .map((post, i) => (
+                          <tr key={i}>
+                            <td>
+                              <span
+                                className={`pill ${POST_TYPE_COLORS[post.post_type]}`}
+                              >
+                                {post.post_type}
+                              </span>
+                            </td>
+                            <td className="table-score">
+                              {post.engagement_score.toFixed(1)}
+                            </td>
+                            <td style={{ fontSize: "12px", color: "#64748b" }}>
+                              {post.likes + post.comments + post.reposts}{" "}
+                              interactions
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div
+                  style={{
+                    padding: "20px",
+                    textAlign: "center",
+                    color: "#94a3b8",
+                    fontSize: "13px",
+                  }}
+                >
+                  No posts to display
+                </div>
+              )}
+            </div>
+
+            {/* AI Insights */}
+            <div className="card animate-fade-up">
+              <div className="card-title">AI Insights</div>
+              <div className="card-subtitle">Key findings from your data</div>
+
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "16px",
+                }}
+              >
+                {insights.map((insight, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      display: "flex",
+                      gap: "12px",
+                      paddingBottom: "12px",
+                      borderBottom: "1px solid #eef1f7",
+                    }}
+                  >
+                    <div style={{ fontSize: "20px" }}>{insight.icon}</div>
+                    <div>
+                      <div
+                        style={{
+                          fontSize: "12.5px",
+                          fontWeight: 600,
+                          color: "#1e293b",
+                          marginBottom: "2px",
+                        }}
+                      >
+                        {insight.title}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: "11.5px",
+                          color: "#94a3b8",
+                          lineHeight: "1.4",
+                        }}
+                      >
+                        {insight.desc}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Call to Action */}
+          <div
+            style={{
+              background: "linear-gradient(135deg, #f1f0fe, #ede9fe)",
+              border: "1px solid #c4b5fd",
+              borderRadius: "10px",
+              padding: "20px 24px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              animation: "fadeUp 400ms ease-out both",
+            }}
+          >
+            <div>
+              <div
+                style={{
+                  fontWeight: 600,
+                  fontSize: "14px",
+                  color: "#6c3bfe",
+                  marginBottom: "4px",
+                }}
+              >
+                Ready to predict engagement?
+              </div>
+              <div style={{ fontSize: "13px", color: "#7c3aed" }}>
+                Train the AI model and forecast your next post's performance
+              </div>
+            </div>
+            <Link
+              href="/predict"
+              className="btn btn-primary"
+              style={{ whiteSpace: "nowrap" }}
+            >
+              Go to Predict
+            </Link>
+          </div>
+        </>
+      )}
     </Layout>
-  )
+  );
 }

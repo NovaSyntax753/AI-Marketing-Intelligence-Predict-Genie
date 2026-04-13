@@ -14,7 +14,6 @@ from schemas import (
     PredictionResponse
 )
 from analytics_engine import AnalyticsEngine
-from prediction_engine import PredictionEngine
 from recommendation_engine import RecommendationEngine
 
 # -----------------------------
@@ -27,6 +26,28 @@ def ensure_csv_data(db: Session):
             status_code=400,
             detail="No CSV data uploaded yet. Please upload CSV first."
         )
+
+
+prediction_engine = None
+
+
+def get_prediction_engine():
+    global prediction_engine
+    if prediction_engine is None:
+        from prediction_engine import PredictionEngine
+
+        prediction_engine = PredictionEngine()
+    return prediction_engine
+
+
+def get_evaluation_record_ids(db: Session):
+    record_ids = get_prediction_engine().get_or_create_test_record_ids(db)
+    if not record_ids:
+        raise HTTPException(
+            status_code=400,
+            detail="Not enough records to create evaluation split. Upload more data."
+        )
+    return record_ids
 
 # -----------------------------
 # FastAPI App
@@ -55,8 +76,6 @@ app.add_middleware(
 def startup_event():
     init_db()
     print("Database initialized successfully")
-
-prediction_engine = PredictionEngine()
 
 # -----------------------------
 # HEALTH CHECK
@@ -134,27 +153,32 @@ def add_record(data: MarketingDataInput, db: Session = Depends(get_db)):
 @app.get("/analytics")
 def get_analytics(db: Session = Depends(get_db)):
     ensure_csv_data(db)
-    return AnalyticsEngine.get_analytics(db)
+    evaluation_ids = get_evaluation_record_ids(db)
+    return AnalyticsEngine.get_analytics(db, evaluation_ids)
 
 @app.get("/analytics/post-type")
 def post_type_analysis(db: Session = Depends(get_db)):
     ensure_csv_data(db)
-    return AnalyticsEngine.get_post_type_analysis(db)
+    evaluation_ids = get_evaluation_record_ids(db)
+    return AnalyticsEngine.get_post_type_analysis(db, evaluation_ids)
 
 @app.get("/analytics/time-analysis")
 def time_analysis(db: Session = Depends(get_db)):
     ensure_csv_data(db)
-    return AnalyticsEngine.get_time_analysis(db)
+    evaluation_ids = get_evaluation_record_ids(db)
+    return AnalyticsEngine.get_time_analysis(db, evaluation_ids)
 
 @app.get("/analytics/followers")
 def followers_analysis(db: Session = Depends(get_db)):
     ensure_csv_data(db)
-    return AnalyticsEngine.get_follower_analysis(db)
+    evaluation_ids = get_evaluation_record_ids(db)
+    return AnalyticsEngine.get_follower_analysis(db, evaluation_ids)
 
 @app.get("/analytics/platform-comparison")
 def platform_comparison(db: Session = Depends(get_db)):
     ensure_csv_data(db)
-    return AnalyticsEngine.get_follower_analysis(db)
+    evaluation_ids = get_evaluation_record_ids(db)
+    return AnalyticsEngine.get_follower_analysis(db, evaluation_ids)
 
 # -----------------------------
 # MODEL TRAINING
@@ -162,7 +186,7 @@ def platform_comparison(db: Session = Depends(get_db)):
 @app.post("/train-model")
 def train_model(db: Session = Depends(get_db)):
     ensure_csv_data(db)
-    result = prediction_engine.train_model(db)
+    result = get_prediction_engine().train_model(db)
     if not result["success"]:
         raise HTTPException(status_code=400, detail=result["message"])
     return result
@@ -172,7 +196,7 @@ def train_model(db: Session = Depends(get_db)):
 # -----------------------------
 @app.post("/predict", response_model=PredictionResponse)
 def predict(data: PredictionInput):
-    result = prediction_engine.predict(
+    result = get_prediction_engine().predict(
         followers_count=data.Followers_count,
         post_type=data.Post_type,
         posting_time=data.PostingTime,
