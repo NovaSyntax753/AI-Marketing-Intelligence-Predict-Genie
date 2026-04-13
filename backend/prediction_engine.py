@@ -1,13 +1,13 @@
-import pandas as pd
-import numpy as np
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.preprocessing import LabelEncoder
-from sklearn.model_selection import train_test_split
-import joblib
-import os
-from typing import Dict, Any
-from sqlalchemy.orm import Session
-from models import MarketingData
+# import pandas as pd
+# import numpy as np
+# from sklearn.ensemble import RandomForestRegressor
+# from sklearn.preprocessing import LabelEncoder
+# from sklearn.model_selection import train_test_split
+# import joblib
+# import os
+# from typing import Dict, Any
+# from sqlalchemy.orm import Session
+# from models import MarketingData
 
 
 # class PredictionEngine:
@@ -239,7 +239,6 @@ import joblib
 import os
 from typing import Dict, Any
 from sqlalchemy.orm import Session
-from models import MarketingData
 
 
 class PredictionEngine:
@@ -249,79 +248,96 @@ class PredictionEngine:
         self.model_path = model_path
         self.model = None
         self.encoders = {}
+        self.feature_columns = []
         self.is_trained = False
 
         os.makedirs(os.path.dirname(model_path), exist_ok=True)
         self.load_model()
 
+    # =========================
+    # TRAIN MODEL (FROM CSV ONLY)
+    # =========================
     def train_model(self, db: Session) -> Dict[str, Any]:
-        """Train ML model"""
+        try:
+            # ✅ Prevent retraining
+            if self.is_trained:
+                return {
+                    "success": True,
+                    "message": "Model already trained (loaded from file)"
+                }
 
-        data = db.query(MarketingData).all()
+            # ✅ Load training dataset
+            df = pd.read_csv("data/fixed_linkedin_posts1_train.csv")
+            df.columns = df.columns.str.strip().str.lower()
 
-        if len(data) < 10:
+            # Handle missing values
+            df["cta_used"] = df["cta_used"].fillna("no_cta")
+            df.fillna(0, inplace=True)
+
+            # ✅ Target variable
+            df["engagement_score"] = (
+                df["like_count"] +
+                2 * df["comment_count"] +
+                3 * df["repost_count"]
+            ) / df["follower_count"].replace(0, 1)
+
+            # -------------------------
+            # Encoding
+            # -------------------------
+            self.encoders["post_type"] = LabelEncoder()
+            df["post_type_encoded"] = self.encoders["post_type"].fit_transform(df["post_type"])
+
+            self.encoders["CTA_used"] = LabelEncoder()
+            df["cta_encoded"] = self.encoders["CTA_used"].fit_transform(df["cta_used"])
+
+            # -------------------------
+            # Features (NO LEAKAGE)
+            # -------------------------
+            self.feature_columns = [
+                "follower_count",
+                "post_type_encoded",
+                "hashtag_count",
+                "mention_count",
+                "cta_encoded"
+            ]
+
+            X = df[self.feature_columns]
+            y = df["engagement_score"]
+
+            # Train/Test split
+            X_train, X_test, y_train, y_test = train_test_split(
+                X, y, test_size=0.2, random_state=42
+            )
+
+            # Model
+            self.model = RandomForestRegressor(
+                n_estimators=100,
+                max_depth=8,
+                random_state=42
+            )
+
+            self.model.fit(X_train, y_train)
+
+            train_score = self.model.score(X_train, y_train)
+            test_score = self.model.score(X_test, y_test)
+
+            self.is_trained = True
+            self.save_model()
+
             return {
-                "success": False,
-                "message": "Need at least 10 records to train model",
-                "data_count": len(data)
+                "success": True,
+                "message": "Model trained from train.csv",
+                "train_score": round(train_score, 4),
+                "test_score": round(test_score, 4),
+                "data_count": len(df)
             }
 
-        # Convert DB data to dataframe
-        df = pd.DataFrame([{
-            "followers_count": d.followers_count,
-            "post_type": d.post_type,
-            "hour": d.post_date.hour,
-            "likes": d.likes,
-            "comments": d.comments,
-            "reposts": d.reposts,
-            "engagement_score": d.engagement_score
-        } for d in data])
+        except Exception as e:
+            return {"success": False, "message": str(e)}
 
-        # Encode post_type
-        self.encoders["post_type"] = LabelEncoder()
-        df["post_type_encoded"] = self.encoders["post_type"].fit_transform(df["post_type"])
-
-        # Features
-        X = df[[
-            "followers_count",
-            "post_type_encoded",
-            "hour",
-            "likes",
-            "comments",
-            "reposts"
-        ]]
-
-        # Target
-        y = df["engagement_score"]
-
-        # Train test split
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=0.2, random_state=42
-        )
-
-        # Model
-        self.model = RandomForestRegressor(
-            n_estimators=100,
-            max_depth=8,
-            random_state=42
-        )
-
-        self.model.fit(X_train, y_train)
-
-        train_score = self.model.score(X_train, y_train)
-        test_score = self.model.score(X_test, y_test)
-
-        self.is_trained = True
-        self.save_model()
-
-        return {
-            "success": True,
-            "message": "Model trained successfully",
-            "train_score": round(train_score, 4),
-            "test_score": round(test_score, 4),
-            "data_count": len(data)
-        }
-
+    # =========================
+    # PREDICT
+    # =========================
     def predict(
         self,
         follower_count: int,
@@ -332,29 +348,43 @@ class PredictionEngine:
     ) -> Dict[str, Any]:
 
         if not self.is_trained or self.model is None:
-            return {
-                "success": False,
-                "message": "Model not trained yet"
-            }
+            return {"success": False, "message": "Model not trained yet"}
 
         try:
+            # Normalize input
+            post_type = post_type.lower()
+            cta_used = cta_used.lower()
+
+            # ✅ Safe fallback for unseen values
+            if post_type not in self.encoders["post_type"].classes_:
+                post_type = self.encoders["post_type"].classes_[0]
+
+            if cta_used not in self.encoders["CTA_used"].classes_:
+                cta_used = self.encoders["CTA_used"].classes_[0]
+
+            # Encode
             post_type_encoded = self.encoders["post_type"].transform([post_type])[0]
+            cta_encoded = self.encoders["CTA_used"].transform([cta_used])[0]
 
-            features = np.array([[
-                follower_count,
-                post_type_encoded,
-                hashtag_count,
-                mention_count,
-                1 if cta_used.lower() in ['yes', 'true', '1'] else 0
-            ]])
+            # Prepare input
+            features = pd.DataFrame([{
+                "follower_count": follower_count,
+                "post_type_encoded": post_type_encoded,
+                "hashtag_count": hashtag_count,
+                "mention_count": mention_count,
+                "cta_encoded": cta_encoded
+            }])
 
+            features = features[self.feature_columns]
+
+            # Prediction
             prediction = self.model.predict(features)[0]
 
             # -------------------------
             # Confidence Score
             # -------------------------
             preds = np.array([
-                tree.predict(features)[0]
+                tree.predict(features.to_numpy())[0]
                 for tree in self.model.estimators_
             ])
 
@@ -365,8 +395,8 @@ class PredictionEngine:
 
             return {
                 "success": True,
-                "predicted_engagement_score": round(float(prediction), 4) * 100,
-                "confidence_score": round(min(confidence * 10, 1), 2) 
+                "predicted_engagement_score": round(float(prediction), 4) *100,
+                "confidence_score": round(min(prediction * 10, 1), 2) 
             }
 
         except Exception as e:
@@ -380,6 +410,7 @@ class PredictionEngine:
             joblib.dump({
                 "model": self.model,
                 "encoders": self.encoders,
+                "feature_columns": self.feature_columns,
                 "is_trained": self.is_trained
             }, self.model_path)
 
@@ -389,6 +420,7 @@ class PredictionEngine:
                 data = joblib.load(self.model_path)
                 self.model = data["model"]
                 self.encoders = data["encoders"]
+                self.feature_columns = data.get("feature_columns", [])
                 self.is_trained = data["is_trained"]
             except Exception as e:
                 print("Model load failed:", e)

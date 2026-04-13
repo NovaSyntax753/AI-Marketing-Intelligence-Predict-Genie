@@ -1,7 +1,7 @@
 import pandas as pd
 from sqlalchemy.orm import Session
 from models import MarketingData
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any
 
 
 class AnalyticsEngine:
@@ -28,7 +28,7 @@ class AnalyticsEngine:
     # =========================
     @staticmethod
     def get_analytics(db: Session) -> Dict[str, Any]:
-        """Get overall analytics"""
+
         data = db.query(MarketingData).all()
         if not data:
             return {
@@ -111,7 +111,7 @@ class AnalyticsEngine:
     # =========================
     @staticmethod
     def get_post_type_analysis(db: Session) -> List[Dict[str, Any]]:
-        """Analyze performance by content type (matches /analytics/post-type route)"""
+
         data = db.query(MarketingData).all()
         if not data:
             return []
@@ -143,7 +143,7 @@ class AnalyticsEngine:
     # =========================
     @staticmethod
     def get_time_analysis(db: Session) -> List[Dict[str, Any]]:
-        """Analyze engagement by posting hour (matches /analytics/time-analysis route)"""
+
         data = db.query(MarketingData).all()
         if not data:
             return []
@@ -170,7 +170,7 @@ class AnalyticsEngine:
     # =========================
     @staticmethod
     def get_follower_analysis(db: Session) -> Dict[str, Any]:
-        """Example: simple follower count analysis"""
+
         data = db.query(MarketingData).all()
         if not data:
             return {}
