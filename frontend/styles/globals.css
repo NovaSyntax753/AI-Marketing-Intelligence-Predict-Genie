@@ -30,3 +30,14 @@ body {
 .stat-card {
   @apply bg-gradient-to-br from-primary to-secondary text-white rounded-lg p-6 shadow-lg;
 }
+
+@keyframes gradientMove {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradientMove 8s ease infinite;
+}
