@@ -3,6 +3,7 @@
 # from sqlalchemy.orm import Session
 # import pandas as pd
 # import io
+# import os
 
 # from database import get_db, init_db
 # from models import MarketingData
@@ -15,15 +16,6 @@
 # from analytics_engine import AnalyticsEngine
 # from prediction_engine import PredictionEngine
 # from recommendation_engine import RecommendationEngine
-
-
-# # -----------------------------
-# # Helper
-# # -----------------------------
-# def ensure_csv_data(db: Session):
-#     if db.query(MarketingData).count() == 0:
-#         raise HTTPException(status_code=400, detail="Upload CSV first")
-
 
 # # -----------------------------
 # # FastAPI App
@@ -38,6 +30,7 @@
 #     allow_headers=["*"],
 # )
 
+# prediction_engine = PredictionEngine()
 
 # # -----------------------------
 # # STARTUP
@@ -45,11 +38,12 @@
 # @app.on_event("startup")
 # def startup_event():
 #     init_db()
-#     print("DB Ready")
 
-
-# prediction_engine = PredictionEngine()
-
+#     # ✅ AUTO LOAD TRAINED MODEL
+#     if prediction_engine.is_trained:
+#         print("✅ Model Loaded Successfully")
+#     else:
+#         print("⚠️ Model not found. Train once using script")
 
 # # -----------------------------
 # # HEALTH
@@ -58,13 +52,8 @@
 # def root():
 #     return {"message": "API running"}
 
-# @app.get("/health")
-# def health():
-#     return {"status": "ok"}
-
-
 # # -----------------------------
-# # CSV UPLOAD (FIXED)
+# # CSV UPLOAD (USER TEST DATA)
 # # -----------------------------
 # @app.post("/upload-data")
 # async def upload_data(file: UploadFile = File(...), db: Session = Depends(get_db)):
@@ -95,186 +84,82 @@
 #     if missing:
 #         raise HTTPException(status_code=400, detail=f"Missing columns: {missing}")
 
-#     # ✅ FIX: handle null CTA
 #     df["cta_used"] = df["cta_used"].fillna("no_cta")
 
-#     records_added = 0
-#     errors = []
+#     for _, row in df.iterrows():
+#         record = MarketingData(
+#             name=str(row["name"]),
+#             follower_count=int(row["follower_count"]),
+#             post_type=str(row["post_type"]).lower(),
+#             like_count=int(row["like_count"]),
+#             comment_count=int(row["comment_count"]),
+#             repost_count=int(row["repost_count"]),
+#             hashtag_count=int(row["hashtag_count"]),
+#             mention_count=int(row["mention_count"]),
+#             CTA_used=str(row["cta_used"])
+#         )
 
-#     for idx, row in df.iterrows():
-#         try:
-#             record = MarketingData(
-#                 name=str(row["name"]),
-#                 follower_count=int(row["follower_count"]),
-#                 post_type=str(row["post_type"]).lower(),
-#                 like_count=int(row["like_count"]),
-#                 comment_count=int(row["comment_count"]),
-#                 repost_count=int(row["repost_count"]),
-#                 hashtag_count=int(row["hashtag_count"]),
-#                 mention_count=int(row["mention_count"]),
-#                 CTA_used=str(row["cta_used"])
-#             )
+#         record.engagement_score = (
+#             record.like_count +
+#             2 * record.comment_count +
+#             3 * record.repost_count
+#         ) / max(record.follower_count, 1)
 
-#             # ✅ FIX: consistent formula (NO *100)
-#             record.engagement_score = (
-#                 record.like_count +
-#                 2 * record.comment_count +
-#                 3 * record.repost_count
-#             ) / max(record.follower_count, 1)
-
-#             db.add(record)
-#             records_added += 1
-
-#         except Exception as e:
-#             errors.append(f"Row {idx+1}: {str(e)}")
+#         db.add(record)
 
 #     db.commit()
 
-#     return {
-#         "success": True,
-#         "records_added": records_added,
-#         "total_rows": len(df),
-#         "errors": errors[:5]
-#     }
-
+#     return {"success": True, "message": "User CSV uploaded"}
 
 # # -----------------------------
-# # ADD SINGLE RECORD
-# # -----------------------------
-# @app.post("/add-record", response_model=MarketingDataResponse)
-# def add_record(data: MarketingDataInput, db: Session = Depends(get_db)):
-
-#     record = MarketingData(**data.dict())
-
-#     # ✅ FIX: same formula everywhere
-#     record.engagement_score = ((
-#         record.like_count +
-#         2 * record.comment_count +
-#         3 * record.repost_count
-#     ) / max(record.follower_count, 1)) * 100
-
-#     db.add(record)
-#     db.commit()
-#     db.refresh(record)
-
-#     return record
-
-
-# # -----------------------------
-# # ANALYTICS
+# # ANALYTICS (USER DATA)
 # # -----------------------------
 # @app.get("/analytics")
 # def analytics(db: Session = Depends(get_db)):
-#     ensure_csv_data(db)
 #     return AnalyticsEngine.get_analytics(db)
 
-
 # # -----------------------------
-# # TRAIN MODEL
+# # PREDICT (MODEL USE)
 # # -----------------------------
-# @app.post("/train-model")
-# def train_model(db: Session = Depends(get_db)):
-#     ensure_csv_data(db)
+# @app.post("/predict", response_model=PredictionResponse)
+# def predict(data: PredictionInput):
 
-#     result = prediction_engine.train_model(db)
+#     result = prediction_engine.predict(
+#         follower_count=data.follower_count,
+#         post_type=data.post_type,
+#         hashtag_count=data.hashtag_count,
+#         mention_count=data.mention_count,
+#         cta_used=data.cta_used
+#     )
 
 #     if not result["success"]:
 #         raise HTTPException(status_code=400, detail=result["message"])
 
 #     return result
 
-
 # # -----------------------------
-# # PREDICT (FIXED)
-# # -----------------------------
-# @app.post("/predict", response_model=PredictionResponse)
-# def predict(data: PredictionInput):
-
-#     result = prediction_engine.predict(
-#         # follower_count=data.follower_count,
-#         # post_type=data.post_type,
-#         # like_count=data.like_count,
-#         # comment_count=data.comment_count,
-#         # repost_count=data.repost_count,
-#         # hashtag_count=data.hashtag_count,
-#         # mention_count=data.mention_count,
-#         # cta_used=data.cta_used   # ✅ FIXED
-#         follower_count=data.follower_count,
-#         post_type=data.post_type,
-#         hashtag_count=data.hashtag_count,
-#         mention_count=data.mention_count,
-#         cta_used=data.cta_used
-# )
-    
-
-#     if not result["success"]:
-#         raise HTTPException(status_code=400, detail=result["message"])
-
-#     # ✅ FIX: return only required fields
-#     return {
-#           "success": True,
-#     "predicted_engagement_score": result["predicted_engagement_score"],
-#     "confidence_score": result["confidence_score"]
-#     }
-
-
-# # -----------------------------
-# # RECOMMENDATIONS
+# # RECOMMENDATIONS (USER DATA)
 # # -----------------------------
 # @app.get("/recommendations")
 # def recommendations(db: Session = Depends(get_db)):
-#     ensure_csv_data(db)
 #     return RecommendationEngine.generate_recommendations(db)
 
-
-# # -----------------------------
-# # DATA MANAGEMENT
-# # -----------------------------
 # @app.get("/data/count")
-# def data_count(db: Session = Depends(get_db)):
-#     return {"total_records": db.query(MarketingData).count()}
-
+# def get_data_count(db: Session = Depends(get_db)):
+#     count = db.query(MarketingData).count()
+#     return {"count": count}
 
 # @app.get("/data/recent")
-# def recent_data(limit: int = 10, db: Session = Depends(get_db)):
-#     records = (
-#         db.query(MarketingData)
-#         .order_by(MarketingData.id.desc())
-#         .limit(limit)
-#         .all()
-#     )
-#     return {"records": [r.to_dict() for r in records]}
-
-
-# @app.delete("/data/clear")
-# def clear_data(db: Session = Depends(get_db)):
-#     count = db.query(MarketingData).count()
-#     db.query(MarketingData).delete()
-#     db.commit()
-#     return {"deleted": count}
-
-
-# # -----------------------------
-# # EXTRA ANALYTICS ROUTES
-# # -----------------------------
+# def get_recent_data(limit: int = 10, db: Session = Depends(get_db)):
+#     data = db.query(MarketingData).order_by(MarketingData.id.desc()).limit(limit).all()
+#     return data
 # @app.get("/analytics/post-type")
 # def post_type_analysis(db: Session = Depends(get_db)):
-#     ensure_csv_data(db)
 #     return AnalyticsEngine.get_post_type_analysis(db)
-
 
 # @app.get("/analytics/time-analysis")
 # def time_analysis(db: Session = Depends(get_db)):
-#     ensure_csv_data(db)
 #     return AnalyticsEngine.get_time_analysis(db)
-
-
-# @app.get("/analytics/followers")
-# def followers_analysis(db: Session = Depends(get_db)):
-#     ensure_csv_data(db)
-#     return AnalyticsEngine.get_follower_analysis(db)
-
-
 # # -----------------------------
 # # RUN
 # # -----------------------------
@@ -287,16 +172,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 import pandas as pd
 import io
-import os
+import random
+from datetime import datetime
 
 from database import get_db, init_db
 from models import MarketingData
-from schemas import (
-    MarketingDataInput,
-    MarketingDataResponse,
-    PredictionInput,
-    PredictionResponse
-)
+from schemas import PredictionInput, PredictionResponse
 from analytics_engine import AnalyticsEngine
 from prediction_engine import PredictionEngine
 from recommendation_engine import RecommendationEngine
@@ -322,22 +203,17 @@ prediction_engine = PredictionEngine()
 @app.on_event("startup")
 def startup_event():
     init_db()
-
-    # ✅ AUTO LOAD TRAINED MODEL
-    if prediction_engine.is_trained:
-        print("✅ Model Loaded Successfully")
-    else:
-        print("⚠️ Model not found. Train once using script")
+    print("✅ DB Ready")
 
 # -----------------------------
-# HEALTH
+# ROOT
 # -----------------------------
 @app.get("/")
 def root():
     return {"message": "API running"}
 
 # -----------------------------
-# CSV UPLOAD (USER TEST DATA)
+# CSV UPLOAD (FINAL FIXED)
 # -----------------------------
 @app.post("/upload-data")
 async def upload_data(file: UploadFile = File(...), db: Session = Depends(get_db)):
@@ -345,9 +221,11 @@ async def upload_data(file: UploadFile = File(...), db: Session = Depends(get_db
     if not file.filename.endswith(".csv"):
         raise HTTPException(status_code=400, detail="Upload CSV only")
 
+    # 🔥 CLEAR OLD DATA
     db.query(MarketingData).delete()
     db.commit()
 
+    # READ CSV
     contents = await file.read()
     df = pd.read_csv(io.StringIO(contents.decode("utf-8")))
     df.columns = df.columns.str.strip().str.lower()
@@ -368,9 +246,25 @@ async def upload_data(file: UploadFile = File(...), db: Session = Depends(get_db
     if missing:
         raise HTTPException(status_code=400, detail=f"Missing columns: {missing}")
 
+    # FIX NULL VALUES
     df["cta_used"] = df["cta_used"].fillna("no_cta")
+    df = df.fillna(0)
 
+    # 🎯 RANDOM TIME PER UPLOAD (ONLY ONCE)
+    random_hour = random.randint(0, 23)
+
+    base_time = datetime.now().replace(
+        hour=random_hour,
+        minute=0,
+        second=0,
+        microsecond=0
+    )
+
+    records_added = 0
+
+    # LOOP
     for _, row in df.iterrows():
+
         record = MarketingData(
             name=str(row["name"]),
             follower_count=int(row["follower_count"]),
@@ -380,9 +274,11 @@ async def upload_data(file: UploadFile = File(...), db: Session = Depends(get_db
             repost_count=int(row["repost_count"]),
             hashtag_count=int(row["hashtag_count"]),
             mention_count=int(row["mention_count"]),
-            CTA_used=str(row["cta_used"])
+            CTA_used=str(row["cta_used"]),
+            created_at=base_time   # ✅ SAME TIME FOR WHOLE CSV
         )
 
+        # ✅ CORRECT ENGAGEMENT FORMULA
         record.engagement_score = (
             record.like_count +
             2 * record.comment_count +
@@ -390,20 +286,26 @@ async def upload_data(file: UploadFile = File(...), db: Session = Depends(get_db
         ) / max(record.follower_count, 1)
 
         db.add(record)
+        records_added += 1
 
     db.commit()
 
-    return {"success": True, "message": "User CSV uploaded"}
+    return {
+        "success": True,
+        "records_added": records_added,
+        "total_rows": len(df),
+        "upload_hour": random_hour  # debug (you can remove later)
+    }
 
 # -----------------------------
-# ANALYTICS (USER DATA)
+# ANALYTICS
 # -----------------------------
 @app.get("/analytics")
 def analytics(db: Session = Depends(get_db)):
     return AnalyticsEngine.get_analytics(db)
 
 # -----------------------------
-# PREDICT (MODEL USE)
+# PREDICT
 # -----------------------------
 @app.post("/predict", response_model=PredictionResponse)
 def predict(data: PredictionInput):
@@ -422,21 +324,26 @@ def predict(data: PredictionInput):
     return result
 
 # -----------------------------
-# RECOMMENDATIONS (USER DATA)
+# RECOMMENDATIONS
 # -----------------------------
 @app.get("/recommendations")
 def recommendations(db: Session = Depends(get_db)):
     return RecommendationEngine.generate_recommendations(db)
 
+# -----------------------------
+# DEBUG APIs
+# -----------------------------
 @app.get("/data/count")
 def get_data_count(db: Session = Depends(get_db)):
-    count = db.query(MarketingData).count()
-    return {"count": count}
+    return {"count": db.query(MarketingData).count()}
 
 @app.get("/data/recent")
-def get_recent_data(limit: int = 10, db: Session = Depends(get_db)):
-    data = db.query(MarketingData).order_by(MarketingData.id.desc()).limit(limit).all()
-    return data
+def get_recent_data(db: Session = Depends(get_db)):
+    return db.query(MarketingData).all()
+
+# -----------------------------
+# EXTRA ANALYTICS
+# -----------------------------
 @app.get("/analytics/post-type")
 def post_type_analysis(db: Session = Depends(get_db)):
     return AnalyticsEngine.get_post_type_analysis(db)
@@ -444,6 +351,7 @@ def post_type_analysis(db: Session = Depends(get_db)):
 @app.get("/analytics/time-analysis")
 def time_analysis(db: Session = Depends(get_db)):
     return AnalyticsEngine.get_time_analysis(db)
+
 # -----------------------------
 # RUN
 # -----------------------------

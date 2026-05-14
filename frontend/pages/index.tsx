@@ -1,318 +1,180 @@
-import React, { useEffect, useState } from "react";
-import Link from "next/link";
-import Layout from "@/components/Layout";
-import { getDataCount, getAnalytics } from "@/lib/api";
-import {
-  FiUploadCloud,
-  FiTrendingUp,
-  FiActivity,
-  FiAward,
-} from "react-icons/fi";
+// import React, { useEffect, useState } from 'react'
+// import Layout from '@/components/Layout'
+// import { getDataCount, getAnalytics } from '@/lib/api'
+// import { FaChartLine, FaUpload, FaBrain, FaLightbulb } from 'react-icons/fa'
+// import Link from 'next/link'
+// import { motion } from 'framer-motion'
 
-interface TopPost {
-  post_type: string;
-  engagement_score: number;
-  likes: number;
-  comments: number;
-  reposts: number;
-}
+// // Types
+// interface AnalyticsData {
+//   avg_engagement_score: number
+//   total_posts: number
+// }
 
-interface Analytics {
-  total_posts: number;
-  avg_engagement_score: number;
-  content_type_stats: Record<string, { engagement_score: number }>;
-  top_performing_posts: TopPost[];
-}
+// export default function Home() {
 
-const POST_TYPE_COLORS: Record<string, string> = {
-  reel: "pill-reel",
-  video: "pill-video",
-  image: "pill-image",
-  text: "pill-text",
-};
+//   const [dataCount, setDataCount] = useState(0)
+//   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null)
+//   const [loading, setLoading] = useState(true)
+//   const [error, setError] = useState<string | null>(null)
 
-export default function Dashboard() {
-  const [dataCount, setDataCount] = useState<number>(0);
-  const [analytics, setAnalytics] = useState<Analytics | null>(null);
-  const [loading, setLoading] = useState(true);
+//   useEffect(() => {
+//     loadData()
+//   }, [])
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+//   const loadData = async () => {
+//     try {
+//       setLoading(true)
 
-  const fetchData = async () => {
-    try {
-      const { total_records } = await getDataCount();
-      setDataCount(total_records);
-      if (total_records > 0) {
-        const data = await getAnalytics();
-        setAnalytics(data);
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+//       const countData = await getDataCount()
+//       setDataCount(countData?.total_records || 0)
 
-  const bestType = analytics
-    ? Object.entries(analytics.content_type_stats).sort(
-        (a, b) => b[1].engagement_score - a[1].engagement_score,
-      )[0]?.[0]
-    : null;
+//       if (countData?.total_records > 0) {
+//         const analyticsData = await getAnalytics()
+//         setAnalytics(analyticsData)
+//       }
 
-  const bestTime = analytics
-    ? analytics.top_performing_posts.length > 0
-      ? "Peak Hours (2-4 PM)"
-      : "Not yet determined"
-    : null;
+//     } catch (err) {
+//       console.error('Error loading data:', err)
+//       setError('Failed to load dashboard data')
+//     } finally {
+//       setLoading(false)
+//     }
+//   }
 
-  const insights = [
-    {
-      icon: "📱",
-      title: "Video posts drive 3x engagement",
-      desc: "Prioritize video format for maximum reach",
-    },
-    {
-      icon: "⏰",
-      title: "Best time: Weekday afternoons",
-      desc: "Post between 2-4 PM for peak engagement",
-    },
-    {
-      icon: "✨",
-      title: "Hashtags increase visibility",
-      desc: "Use 5-10 relevant hashtags per post",
-    },
-  ];
+//   return (
+//     <Layout>
 
+//       <div className="flex flex-col justify-center items-center text-center min-h-[calc(100vh-220px)] space-y-10">
+
+//         {/* Header */}
+//         <div>
+//           <motion.h1
+//             initial={{ scale: 0.6, opacity: 0 }}
+//             animate={{ scale: 1, opacity: 1 }}
+//             transition={{ duration: 0.7, type: "spring", stiffness: 100 }}
+//             className="text-5xl font-bold mb-4 
+//               bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 
+//               bg-clip-text text-transparent"
+//           >
+//             Welcome to Predict Genie
+//           </motion.h1>
+
+//           <motion.p
+//             initial={{ y: 40, opacity: 0 }}
+//             animate={{ y: 0, opacity: 1 }}
+//             transition={{ duration: 0.6, delay: 0.3 }}
+//             className="text-xl text-gray-600"
+//           >
+//             AI-Powered Marketing Intelligence Platform
+//           </motion.p>
+//         </div>
+
+        
+
+//       </div> 
+
+//     </Layout>
+//   )
+// }
+
+import React from 'react'
+import Layout from '@/components/Layout'
+import Link from 'next/link'
+import { motion } from 'framer-motion'
+import { FaRocket, FaMagic, FaGlobe, FaPlay } from 'react-icons/fa'
+import Explore from '@/components/Explore'
+
+export default function Home() {
   return (
-    <Layout
-      title="Dashboard"
-      subtitle="Your marketing intelligence at a glance"
-      recordCount={dataCount}
-    >
-      {loading ? (
-        <div className="loading-screen">
-          <div className="spinner" />
-          Loading your data…
-        </div>
-      ) : dataCount === 0 ? (
-        <div className="empty-state">
-          <div className="empty-state-icon">📊</div>
-          <div className="empty-state-title">No data uploaded yet</div>
-          <div className="empty-state-desc">
-            Import your CSV file to unlock analytics, predictions, and AI
-            recommendations.
-          </div>
-          <Link href="/upload" className="btn btn-primary">
-            <FiUploadCloud size={14} />
-            Upload Dataset
-          </Link>
-        </div>
-      ) : (
-        <>
-          {/* Stat Cards --- 4 column grid */}
-          <div
-            className="stat-grid animate-fade-up"
-            style={{ marginBottom: "24px" }}
-          >
-            <div className="stat-card animate-fade-up animate-delay-1">
-              <div className="stat-card-label">Total Posts</div>
-              <div className="stat-card-value">
-                {dataCount.toLocaleString()}
-              </div>
-              <div className="stat-card-delta stat-card-delta-purple">
-                Posts analyzed
-              </div>
-            </div>
+  <Layout>
 
-            <div className="stat-card animate-fade-up animate-delay-2">
-              <div className="stat-card-label">Avg Engagement</div>
-              <div className="stat-card-value">
-                {analytics ? analytics.avg_engagement_score.toFixed(1) : "—"}
-              </div>
-              <div className="stat-card-delta stat-card-delta-green">
-                Score per post
-              </div>
-            </div>
+    {/* ================= HERO SECTION ================= */}
+    <section className="min-h-[40vh] flex flex-col items-center justify-center text-center px-6">
 
-            <div className="stat-card animate-fade-up animate-delay-3">
-              <div className="stat-card-label">Top Format</div>
-              <div
-                className="stat-card-value"
-                style={{ fontSize: "18px", textTransform: "capitalize" }}
-              >
-                {bestType ?? "—"}
-              </div>
-              <span
-                className={`pill ${POST_TYPE_COLORS[bestType ?? "text"]}`}
-                style={{ marginTop: "8px" }}
-              >
-                {bestType}
-              </span>
-            </div>
+      <motion.h1
+        initial={{ opacity: 0, y: -40 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8 }}
+        className="text-6xl font-extrabold mb-6 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 bg-clip-text text-transparent"
+      >
+        Predict Genie ✨
+      </motion.h1>
 
-            <div className="stat-card animate-fade-up animate-delay-4">
-              <div className="stat-card-label">Best Time</div>
-              <div className="stat-card-value" style={{ fontSize: "16px" }}>
-                {bestTime}
-              </div>
-              <div className="stat-card-delta stat-card-delta-purple">
-                Peak hours
-              </div>
-            </div>
-          </div>
+      <motion.p
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+        className="text-lg md:text-xl text-gray-700 max-w-xl mb-10"
+      >
+        Turn your data into powerful predictions with next-gen AI intelligence.
+      </motion.p>
 
-          {/* Content Grid --- 2 columns */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: "20px",
-              marginBottom: "24px",
-            }}
-          >
-            {/* Top Performing Posts Table */}
-            <div className="card animate-fade-up">
-              <div className="card-title">Top Performing Posts</div>
-              <div className="card-subtitle">Highest engagement scores</div>
+      {/* CTA */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay: 0.5 }}
+        className="flex gap-6"
+      >
+        <Link href="/upload">
+          <button className="flex items-center gap-2 px-8 py-4 bg-indigo-600 text-white rounded-2xl shadow-xl hover:scale-110 transition">
+            <FaRocket /> Get Started
+          </button>
+        </Link>
 
-              {analytics && analytics.top_performing_posts.length > 0 ? (
-                <div className="table-container">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Type</th>
-                        <th>Score</th>
-                        <th>Engagement</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {analytics.top_performing_posts
-                        .slice(0, 5)
-                        .map((post, i) => (
-                          <tr key={i}>
-                            <td>
-                              <span
-                                className={`pill ${POST_TYPE_COLORS[post.post_type]}`}
-                              >
-                                {post.post_type}
-                              </span>
-                            </td>
-                            <td className="table-score">
-                              {post.engagement_score.toFixed(1)}
-                            </td>
-                            <td style={{ fontSize: "12px", color: "#64748b" }}>
-                              {post.likes + post.comments + post.reposts}{" "}
-                              interactions
-                            </td>
-                          </tr>
-                        ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div
-                  style={{
-                    padding: "20px",
-                    textAlign: "center",
-                    color: "#94a3b8",
-                    fontSize: "13px",
-                  }}
-                >
-                  No posts to display
-                </div>
-              )}
-            </div>
+        <Link href="/analytics">
+          <button className="flex items-center gap-2 px-8 py-4 bg-white text-indigo-600 border border-indigo-600 rounded-2xl shadow-lg hover:scale-110 transition">
+            <FaPlay /> Explore
+          </button>
+        </Link>
+      </motion.div>
 
-            {/* AI Insights */}
-            <div className="card animate-fade-up">
-              <div className="card-title">AI Insights</div>
-              <div className="card-subtitle">Key findings from your data</div>
+    </section>
 
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "16px",
-                }}
-              >
-                {insights.map((insight, i) => (
-                  <div
-                    key={i}
-                    style={{
-                      display: "flex",
-                      gap: "12px",
-                      paddingBottom: "12px",
-                      borderBottom: "1px solid #eef1f7",
-                    }}
-                  >
-                    <div style={{ fontSize: "20px" }}>{insight.icon}</div>
-                    <div>
-                      <div
-                        style={{
-                          fontSize: "12.5px",
-                          fontWeight: 600,
-                          color: "#1e293b",
-                          marginBottom: "2px",
-                        }}
-                      >
-                        {insight.title}
-                      </div>
-                      <div
-                        style={{
-                          fontSize: "11.5px",
-                          color: "#94a3b8",
-                          lineHeight: "1.4",
-                        }}
-                      >
-                        {insight.desc}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+    {/* ================= FEATURES SECTION ================= */}
+    <section className="py-20 px-6">
 
-          {/* Call to Action */}
-          <div
-            style={{
-              background: "linear-gradient(135deg, #f1f0fe, #ede9fe)",
-              border: "1px solid #c4b5fd",
-              borderRadius: "10px",
-              padding: "20px 24px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              animation: "fadeUp 400ms ease-out both",
-            }}
-          >
-            <div>
-              <div
-                style={{
-                  fontWeight: 600,
-                  fontSize: "14px",
-                  color: "#6c3bfe",
-                  marginBottom: "4px",
-                }}
-              >
-                Ready to predict engagement?
-              </div>
-              <div style={{ fontSize: "13px", color: "#7c3aed" }}>
-                Train the AI model and forecast your next post's performance
-              </div>
-            </div>
-            <Link
-              href="/predict"
-              className="btn btn-primary"
-              style={{ whiteSpace: "nowrap" }}
-            >
-              Go to Predict
-            </Link>
-          </div>
-        </>
-      )}
-    </Layout>
-  );
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-10 max-w-5xl mx-auto">
+
+        <motion.div whileHover={{ scale: 1.1 }} className="p-8 bg-white/70 backdrop-blur-lg rounded-3xl shadow-lg text-center">
+          <FaMagic className="text-4xl text-purple-500 mb-4 mx-auto" />
+          <h3 className="text-xl font-semibold">Smart Predictions</h3>
+          <p className="text-gray-600 mt-2">AI models that forecast engagement instantly.</p>
+        </motion.div>
+
+        <motion.div whileHover={{ scale: 1.1 }} className="p-8 bg-white/70 backdrop-blur-lg rounded-3xl shadow-lg text-center">
+          <FaGlobe className="text-4xl text-indigo-500 mb-4 mx-auto" />
+          <h3 className="text-xl font-semibold">Market Insights</h3>
+          <p className="text-gray-600 mt-2">Understand trends and audience behavior.</p>
+        </motion.div>
+
+        <motion.div whileHover={{ scale: 1.1 }} className="p-8 bg-white/70 backdrop-blur-lg rounded-3xl shadow-lg text-center">
+          <FaRocket className="text-4xl text-pink-500 mb-4 mx-auto" />
+          <h3 className="text-xl font-semibold">Growth Engine</h3>
+          <p className="text-gray-600 mt-2">Boost your strategy with AI-powered actions.</p>
+        </motion.div>
+
+      </div>
+
+    </section>
+
+    {/* ================= ANIMATED DIVIDER ================= */}
+    <section className="flex justify-center">
+      <motion.div
+        initial={{ width: 0, opacity: 0 }}
+        whileInView={{ width: "60%", opacity: 1 }}
+        transition={{ duration: 0.8, ease: "easeInOut" }}
+        viewport={{ once: true }}
+        className="h-[2px] bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 my-6"
+      />
+    </section>
+
+    {/* ================= EXPLORE SECTION ================= */}
+    <section className="pb-20">
+      <Explore />
+    </section>
+
+  </Layout>
+)
 }
