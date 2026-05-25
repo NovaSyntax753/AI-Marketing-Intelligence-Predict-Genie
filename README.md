@@ -1,4 +1,8 @@
-# 🔮 Predict Genie - AI Marketing Intelligence Platform
+<div align="center">
+
+# 🔮 Predict Genie
+
+### AI Marketing Intelligence Platform
 
 A production-ready AI-powered marketing analytics and prediction platform built with modern technologies.
 
@@ -6,6 +10,10 @@ A production-ready AI-powered marketing analytics and prediction platform built 
 ![Backend](https://img.shields.io/badge/Backend-FastAPI-009688?style=for-the-badge&logo=fastapi)
 ![Database](https://img.shields.io/badge/Database-PostgreSQL-316192?style=for-the-badge&logo=postgresql)
 ![ML](https://img.shields.io/badge/ML-scikit--learn-F7931E?style=for-the-badge&logo=scikit-learn)
+
+</div>
+
+---
 
 ## 🚀 Features
 
@@ -472,8 +480,3 @@ Built with ❤️ using AI-assisted development
 **Found a bug?** Please open an issue with details.
 
 **Want to contribute?** Pull requests are welcome!
-#   n e w P r e d i c t G e n e i 
- 
- #   n e w P r e d i c t G e n e i 
- 
- 
